@@ -543,7 +543,7 @@ def parse_args(argv=sys.argv):
                         help="Limit number of examples per evaluation (default: None for full dataset)")
     parser.add_argument("--no-sync-to-s3", dest="sync_to_s3", action="store_false",
                         help="Upload results to S3 (requires --s3-base-dir)")
-    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-parcontrol/ParControl/evals",
+    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-parcontrol/nd-lora/evals",
                         help="S3 base directory for uploading results")
     parser.add_argument("--force", action="store_true", help="Build even copy exists")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility (default: 42)")

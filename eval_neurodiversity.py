@@ -619,11 +619,11 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="PyTorch hook-based activation recording during evaluation")
     parser.add_argument("--model-names", nargs="+", help="Model name or S3 path",
                         default=[
-                            "s3://obviouslywrong-parcontrol/ParControl/optuna/optuna-nslP-2025-10-07-03-12-51-trial-001",
-                            "s3://obviouslywrong-parcontrol/ParControl/2025-09-22-18-44-51",
-                            "s3://obviouslywrong-parcontrol/ParControl/2025-09-23-13-20-48",
-                            "s3://obviouslywrong-parcontrol/ParControl/2025-09-24-16-57-26",
-                            "s3://obviouslywrong-parcontrol/ParControl/2025-09-15-11-24-40",
+                            "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4",
+                            "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4_Original",
+                            "s3://obviouslywrong-parcontrol/nd-lora/ParScale-BT_P4",
+                            "s3://obviouslywrong-parcontrol/nd-lora/Stream_LoRA_P4",
+                            "s3://obviouslywrong-parcontrol/nd-lora/ParScale_P4_R64",
                         ])
     parser.add_argument("--target-layer", type=str, default="model.model.norm",
                         help="Target layer for monitoring and optional corruption")
@@ -642,7 +642,7 @@ def parse_args(argv=None):
     parser.add_argument("--resamplings", type=int, default=16,
                         help="Number of bootstrap resamplings to take")
     parser.add_argument("--limit", type=int, default=128, help="Sample limit per task")
-    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-parcontrol/ParControl/neurodiversity",
+    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-parcontrol/nd-lora/neurodiversity",
                         help="S3 base directory for uploading results")
     parser.add_argument("--force", action="store_true",
                         help="Force re-evaluation even if results exist")

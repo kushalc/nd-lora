@@ -422,7 +422,7 @@ def main():
                             "Qwen/Qwen2.5-0.5B",
                             "Qwen/Qwen2.5-1.5B",
                         ])
-    parser.add_argument("--s3-base-path", type=str, default="s3://obviouslywrong-parcontrol/ParControl",
+    parser.add_argument("--s3-base-path", type=str, default="s3://obviouslywrong-parcontrol/nd-lora",
                         help="S3 path for syncing ParControl model results")
 
     parser.add_argument("--plot-mode", nargs="+", choices=['all', "pub", 'summ', 'qa', 'instr', 'detect', 'rc'],

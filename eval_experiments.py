@@ -20,7 +20,7 @@ def modal__test():
     kwargs = vars(parse_args([
         "--sample-limit=5",
         "Qwen/Qwen2.5-0.5B",
-        "s3://obviouslywrong-parcontrol/ParControl/2025-09-14-15-20-01",
+        "s3://obviouslywrong-parcontrol/nd-lora/2025-09-14-15-20-01",
     ]))
     evaluate_all_models.remote(**kwargs)
 
@@ -65,7 +65,7 @@ def modal__fParControl():
     # Note: Using only ParControl models for evaluation
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args(["--eval-benchmark-tasks"] + FULL_HALLUC_EVAL_SUITE + GENERAL_HALLUC_EVAL_SUITE +
-                             ["--s3-base-dir=s3://obviouslywrong-parcontrol/ParControl/evals-full"] +
+                             ["--s3-base-dir=s3://obviouslywrong-parcontrol/nd-lora/evals-full"] +
                              checkpoints))
     evaluate_all_models.remote(**kwargs)
 
@@ -76,7 +76,7 @@ def modal__gParControl():
     # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args(["--eval-benchmark-tasks"] + GENERAL_HALLUC_EVAL_SUITE +
-                             ["--s3-base-dir=s3://obviouslywrong-parcontrol/ParControl/evals-general"] +
+                             ["--s3-base-dir=s3://obviouslywrong-parcontrol/nd-lora/evals-general"] +
                              checkpoints))
     evaluate_all_models.remote(**kwargs)
 
@@ -90,7 +90,7 @@ def modal__dParControl():
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args([
         "--sample-limit=1024",
-        "--s3-base-dir=s3://obviouslywrong-parcontrol/ParControl/evals-deep",
+        "--s3-base-dir=s3://obviouslywrong-parcontrol/nd-lora/evals-deep",
 
     ] + checkpoints))
     evaluate_all_models.remote(**kwargs)
@@ -108,7 +108,7 @@ def modal__dParControl_spawns():
 
     kwargs = vars(parse_args([
         "--sample-limit=1024",
-        "--s3-base-dir=s3://obviouslywrong-parcontrol/ParControl/evals-deep",
+        "--s3-base-dir=s3://obviouslywrong-parcontrol/nd-lora/evals-deep",
     ] + checkpoints))
 
     for worker in range(PARALLEL_WORKER_COUNT):
@@ -130,6 +130,6 @@ def modal__qParControl():
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args([
         "--sample-limit=128",
-        "--s3-base-dir=s3://obviouslywrong-parcontrol/ParControl/evals-quick",
+        "--s3-base-dir=s3://obviouslywrong-parcontrol/nd-lora/evals-quick",
     ] + checkpoints))
     evaluate_all_models.remote(**kwargs)

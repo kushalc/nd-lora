@@ -641,7 +641,7 @@ def parse_leaderboard_results(
         eval_blacklist: List of (metric_regex, dataset_regex) tuples to exclude
         model_name_mapping: Dictionary mapping model names to display names
         download_repos: Whether to download from HuggingFace repos (requires imports)
-        s3_path: Optional S3 path for syncing ParControl model results (e.g., "s3://obviouslywrong-parcontrol/ParControl/evals-quick")
+        s3_path: Optional S3 path for syncing ParControl model results (e.g., "s3://obviouslywrong-parcontrol/nd-lora/evals-quick")
 
     Returns:
         Tuple of:

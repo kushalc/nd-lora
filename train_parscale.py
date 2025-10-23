@@ -151,7 +151,7 @@ def parse_args(argv=None):
     parser.add_argument("--run-id", type=str, default=pd.Timestamp.now(tz="America/Los_Angeles").strftime("%Y-%m-%d-%H-%M-%S"),
                         help="Run ID of run for use in S3, W&B and local outputs")
     parser.add_argument("--no-sync-to-s3", dest="sync_to_s3", action="store_false", help="Sync to S3")
-    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-parcontrol/ParControl",
+    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-parcontrol/nd-lora",
                         help="Remote directory for checkpoints and logs, generally only used for Colab sessions")
     parser.add_argument("--config", type=str, default=None,
                         help="Path to YAML configuration file")

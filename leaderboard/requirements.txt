@@ -1,0 +1,33 @@
+torch
+colorama
+APScheduler
+black
+click
+datasets
+gradio
+gradio_client
+huggingface-hub
+matplotlib
+numpy
+pandas
+plotly
+python-dateutil
+requests
+semantic-version
+tqdm
+wandb
+transformers>=4.36.0
+tokenizers>=0.15.0
+lm_eval
+accelerate
+sentencepiece
+langdetect
+sacrebleu
+# cchardet
+rouge_score
+bert-score
+evaluate
+# spacy
+# selfcheckgpt
+immutabledict
+boto3

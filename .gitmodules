@@ -1,0 +1,6 @@
+[submodule "ParScale"]
+	path = ParScale
+	url = git@github.com:kushalc/ParScale.git
+[submodule "leaderboard"]
+	path = leaderboard
+	url = git@github.com:kushalc/hallucination-leaderboard.git

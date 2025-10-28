@@ -2,7 +2,7 @@
 
 Official implementation of **"Neural Diversity Regularizes Hallucinations in Small Language Models"**
 
-Paper: [arXiv:XXXX.XXXXX](https://arxiv.org)
+Paper: [arXiv:2510.20690](https://arxiv.org/abs/2510.20690)
 
 ## Overview
 
@@ -238,7 +238,7 @@ If you use this code or find our work helpful, please cite:
 @article{chakrabarti2025neurodiversity,
   title={Neural Diversity Regularizes Hallucinations in Small Language Models},
   author={Chakrabarti, Kushal and Balachundhar, Nirmal},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  journal={arXiv preprint arXiv:2510.20690},
   year={2025}
 }
 ```

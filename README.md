@@ -1,18 +1,25 @@
-# ParControl: Neural Diversity Regularizes Hallucinations
+<div align="center">
+<h1>ND-LoRA: Neural Diversity Low-Rank Adaptation</h1>
+<i>Neural Diversity Regularizes Hallucinations in Small Language Models</i>
 
-Official implementation of **"Neural Diversity Regularizes Hallucinations in Small Language Models"**
+<br/>
 
-Paper: [arXiv:2510.20690](https://arxiv.org/abs/2510.20690)
+<p align="center">
+    💡&nbsp;<a href="#-key-results">Key Results</a>
+    | 🔥&nbsp;<a href="https://arxiv.org/abs/2510.20690">Paper (arXiv)</a>
+    | 📚&nbsp;<a href="#-citation">Citation</a>
+</p>
+</div>
 
 ## Overview
 
-ParControl implements **ND-LoRA (Neural Diversity Low-Rank Adaptation)**, a novel training method that combines stream-specific LoRA adapters with Barlow Twins regularization to reduce hallucinations in small language models. Our approach achieves significant improvements in factuality across multiple benchmarks while maintaining model quality.
+ND-LoRA implements **Neural Diversity Low-Rank Adaptation**, a novel training method that combines stream-specific LoRA adapters with Barlow Twins regularization to reduce hallucinations in small language models. Our approach achieves significant improvements in factuality and faithfulness across multiple benchmarks while maintaining model quality.
 
 ### Key Results
 
-- **15-25% reduction** in hallucination rates on TruthfulQA, HaluEval, and FEVER benchmarks
+- **15-25% reduction** in hallucination rates on TruthfulQA, HaluEval, and MemoTrap benchmarks
 - **Parameter-efficient**: Only 0.5-2% additional parameters compared to base model
-- **Causally validated**: Neural diversity (Dspec) causally reduces hallucinations (p < 0.001)
+- **Causally validated**: Neural diversity causally reduces hallucinations (p < 0.001)
 
 ## Installation
 
@@ -26,8 +33,8 @@ ParControl implements **ND-LoRA (Neural Diversity Low-Rank Adaptation)**, a nove
 
 ```bash
 # Clone repository
-git clone https://github.com/YOUR_ORG/ParControl-public.git
-cd ParControl-public
+git clone https://github.com/kushalc/nd-lora.git
+cd nd-lora
 
 # Install dependencies
 pip install -r requirements.txt
@@ -42,7 +49,7 @@ git submodule update --init --recursive
 
 ```bash
 # Train ND-LoRA model with P=4 streams
-python train_parscale.py \
+python train_ndlora.py \
   --P=4 \
   --use-stream-lora \
   --orthogonal-lora \
@@ -50,7 +57,7 @@ python train_parscale.py \
   --target-tokens=20_000_000
 
 # Or use Modal for distributed training
-modal run train_parscale::modal__nslP4__OptC9
+modal run train_ndlora::modal__nslP4__OptC9
 ```
 
 ### Evaluation
@@ -95,7 +102,7 @@ checkpoint_path = CORE_CHECKPOINTS["ND-LoRA_P4"]  # S3 path for ND-LoRA P=4 mode
 model_name = MODEL_NAMES["ND-LoRA_P4"]  # "ND-LoRA (P=4, OptC9)"
 
 # Use with evaluation scripts
-python analyze_experiments.py --model-whitelist ParControl/
+python analyze_experiments.py --model-whitelist nd-lora/
 python eval_experiments.py --checkpoint CHECKPOINT_PATH
 ```
 
@@ -132,32 +139,32 @@ All experiments in the paper can be reproduced using Modal for distributed execu
 
 ```bash
 # P=1 baselines (parameter-matched)
-modal run train_parscale::modal__P1__r32
-modal run train_parscale::modal__P1__r64
-modal run train_parscale::modal__P1__r128
+modal run train_ndlora::modal__P1__r32
+modal run train_ndlora::modal__P1__r64
+modal run train_ndlora::modal__P1__r128
 
 # ParScale baselines
-modal run train_parscale::modal__P2__r32
-modal run train_parscale::modal__P4__r64
-modal run train_parscale::modal__P8__r128
+modal run train_ndlora::modal__P2__r32
+modal run train_ndlora::modal__P4__r64
+modal run train_ndlora::modal__P8__r128
 
 # ND-LoRA main results (Optuna-optimized)
-modal run train_parscale::modal__nslP2__OptC9
-modal run train_parscale::modal__nslP4__OptC9
-modal run train_parscale::modal__nslP8__OptC9
+modal run train_ndlora::modal__nslP2__OptC9
+modal run train_ndlora::modal__nslP4__OptC9
+modal run train_ndlora::modal__nslP8__OptC9
 ```
 
 ### Ablation Studies (Tables 4, 6)
 
 ```bash
 # Component ablations
-modal run train_parscale::modal__lP4__r64      # ParScale-BT
-modal run train_parscale::modal__sP4           # Stream-LoRA
-modal run train_parscale::modal__slP4          # Stream-LoRA-BT
-modal run train_parscale::modal__nslP4         # ND-LoRA (original HP)
+modal run train_ndlora::modal__lP4__r64      # ParScale-BT
+modal run train_ndlora::modal__sP4           # Stream-LoRA
+modal run train_ndlora::modal__slP4          # Stream-LoRA-BT
+modal run train_ndlora::modal__nslP4         # ND-LoRA (original HP)
 
 # Module ablations
-modal run train_parscale::modal__p4_nOSL_ablation__modules
+modal run train_ndlora::modal__p4_nOSL_ablation__modules
 ```
 
 ### Evaluation
@@ -195,8 +202,8 @@ python eval_neurodiversity.py \
 ## Repository Structure
 
 ```
-ParControl/
-├── train_parscale.py           # Main training script with Modal entrypoints
+nd-lora/
+├── train_ndlora.py           # Main training script with Modal entrypoints
 ├── eval_experiments.py          # Hallucination benchmark evaluation
 ├── eval_neurodiversity.py       # Causality experiments (corruption analysis)
 ├── ParScale/                    # Core ParScale implementation (submodule)
@@ -215,7 +222,7 @@ ParControl/
 
 ## Modal Integration
 
-This project uses [Modal](https://modal.com) for running experiments and evaluations. Modal entrypoints in `train_parscale.py` allow distributed training across cloud GPUs.
+This project uses [Modal](https://modal.com) for running experiments and evaluations. Modal entrypoints in `train_ndlora.py` allow distributed training across cloud GPUs.
 
 ### Setting up Modal
 
@@ -227,7 +234,7 @@ pip install modal
 modal token new
 
 # Run experiment
-modal run train_parscale::modal__nslP4__OptC9
+modal run train_ndlora::modal__nslP4__OptC9
 ```
 
 ## Citation

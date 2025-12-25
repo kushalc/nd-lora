@@ -5,8 +5,8 @@
 <br/>
 
 <p align="center">
-    💡&nbsp;<a href="#-key-results">Key Results</a>
-    | 🔥&nbsp;<a href="https://arxiv.org/abs/2510.20690">Paper (arXiv)</a>
+    🔥&nbsp;<a href="#-key-results">Key Results</a>
+    | 💡&nbsp;<a href="https://arxiv.org/abs/2510.20690">Paper (arXiv)</a>
     | 📚&nbsp;<a href="#-citation">Citation</a>
 </p>
 </div>

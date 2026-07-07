@@ -16,7 +16,8 @@ from scipy import stats
 # Raw sample-level eval results live under evals/evals-full/ParControl/P=k/<clean-model-name>/
 # in the ndlora bucket; sync_s3_to_local pulls them on demand (no pre-baked parquet).
 S3_BASE_PATH = 's3://obviouslywrong-ndlora/evals/evals-full/ParControl'
-LOCAL_CACHE_DIR = Path(__file__).resolve().parent.parent / 'outputs/evals-full/ParControl'
+# Shared with build_scores' sync target so table1/table2 reuse the same local copy.
+LOCAL_CACHE_DIR = Path(__file__).resolve().parent.parent / 'leaderboard/evals-full/ParControl'
 
 # Task name to metric key mappings
 METRICS_BY_TASK = {
@@ -48,7 +49,8 @@ def sync_s3_to_local(force: bool = False) -> None:
     """Sync S3 evals-full directory to local cache."""
     LOCAL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     logging.info("Syncing S3 to local cache: %s -> %s", S3_BASE_PATH, LOCAL_CACHE_DIR)
-    subprocess.run(['aws', 's3', 'sync', S3_BASE_PATH, str(LOCAL_CACHE_DIR)], check=True)
+    subprocess.run(['aws', 's3', 'sync', S3_BASE_PATH, str(LOCAL_CACHE_DIR),
+                    '--exclude', '*all_results_*'], check=True)
     logging.info("S3 sync complete")
 
 

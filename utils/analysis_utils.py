@@ -15,8 +15,9 @@ import seaborn as sns
 from scipy import stats
 from scipy.optimize import curve_fit
 
-from leaderboard.src.envs import QUEUE_REPO, RESULTS_REPO
-from leaderboard.src.utils import my_snapshot_download
+# NOTE: leaderboard.src.{envs,utils} are imported lazily inside parse_leaderboard_results'
+# download branch — they pull in HF-leaderboard internals that aren't needed (and don't import)
+# for the paper-repro path (--no-download / S3-only).
 
 # Get module logger
 logger = logging.getLogger(__name__)
@@ -675,6 +676,8 @@ def parse_leaderboard_results(
 
     # Download repos if requested
     if download_repos:
+        from leaderboard.src.envs import RESULTS_REPO
+        from leaderboard.src.utils import my_snapshot_download
         logger.info("Syncing results from HF: %s to %s", s3_path, results_path)
         my_snapshot_download(repo_id=RESULTS_REPO, revision="main",
                              local_dir=results_path, repo_type="dataset", max_workers=60)

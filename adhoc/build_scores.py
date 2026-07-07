@@ -18,12 +18,30 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLOTS_DIR = REPO_ROOT / "plots"
+RESULTS_BASE = REPO_ROOT / "leaderboard"           # analyze reads results_base_path/evals-<mode>
+S3_EVALS_BASE = "s3://obviouslywrong-ndlora/evals"
 BASELINE_MODE = "single-stream"
 
 
 def scores_parquet_path(plot_type: str = "pub", mode: str = "full") -> Path:
     """Canonical location analyze_experiments writes to (see analyze_experiments.py:460)."""
     return PLOTS_DIR / f"{plot_type}-{mode}-{BASELINE_MODE}.parquet"
+
+
+def sync_raw_evals(mode: str = "full") -> Path:
+    """Sync the raw per-model eval JSON for one suite from S3 (paper-repro subset).
+
+    Excludes the large all_results_*.json aggregates — analyze/statsig/figure1 read the
+    per-model results_*.json, which already carry the aggregate `results` dict.
+    Returns the local results_path analyze_experiments expects.
+    """
+    dst = RESULTS_BASE / f"evals-{mode}"
+    dst.mkdir(parents=True, exist_ok=True)
+    cmd = ["aws", "s3", "sync", f"{S3_EVALS_BASE}/evals-{mode}", str(dst),
+           "--exclude", "*all_results_*"]
+    logging.info("Syncing raw evals: %s -> %s (excluding all_results)", cmd[3], dst)
+    subprocess.run(cmd, check=True)
+    return dst
 
 
 def ensure_scores_parquet(plot_type: str = "pub", mode: str = "full", force: bool = False) -> Path:
@@ -36,6 +54,7 @@ def ensure_scores_parquet(plot_type: str = "pub", mode: str = "full", force: boo
         logging.info("Using cached scores parquet: %s", out)
         return out
 
+    sync_raw_evals(mode)
     logging.info("Regenerating scores parquet from raw evals: %s (mode=%s)", out, mode)
     cmd = [
         sys.executable, str(REPO_ROOT / "analyze_experiments.py"),
@@ -43,6 +62,8 @@ def ensure_scores_parquet(plot_type: str = "pub", mode: str = "full", force: boo
         "--plot-mode", plot_type,
         "--baseline-mode", BASELINE_MODE,
         "--output-dir", str(PLOTS_DIR),
+        "--results-base-path", str(RESULTS_BASE),
+        "--no-download",   # S3 already synced above; skip HF leaderboard snapshot
     ]
     subprocess.run(cmd, check=True, cwd=REPO_ROOT)
     assert out.exists(), f"analyze_experiments did not produce expected parquet: {out}"

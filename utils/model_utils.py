@@ -16,7 +16,6 @@ from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
 
 from ParScale.configuration_qwen2_parscale import Qwen2ParScaleConfig
 from ParScale.modeling_qwen2_parscale import Qwen2ParScaleForCausalLM
-from utils.lora_ablation import filter_lora_modules_for_ablation
 from utils.stream_aware_lora import (StreamAwareLoRA,
                                      replace_linear_with_stream_lora)
 
@@ -203,12 +202,9 @@ def setup_peft_model(
     lora_alpha=32,
     lora_dropout=0.1,
     lora_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-    lora_ablation_enabled=False,
-    lora_ablation_modules=None,
-    lora_ablation_layers=None,
 ) -> Union[PeftModel, PreTrainedModel]:
     """
-    Setup model for PEFT or full training with optional LoRA ablation.
+    Setup model for PEFT or full training.
 
     Args:
         model: Base model to configure
@@ -218,10 +214,7 @@ def setup_peft_model(
         lora_rank: LoRA rank
         lora_alpha: LoRA alpha
         lora_dropout: LoRA dropout
-        lora_modules: List of modules to apply LoRA to
-        lora_ablation_enabled: Whether to enable LoRA ablation
-        lora_ablation_modules: List of modules to ablate
-        lora_ablation_layers: List of layers to ablate
+        lora_modules: List of modules to apply LoRA to (module ablations = a subset)
 
     Returns:
         Configured model (PeftModel for PEFT, original for full)
@@ -239,25 +232,9 @@ def setup_peft_model(
         for param in model.parameters():
             param.requires_grad = False
 
-        # Apply LoRA ablation by filtering target_modules and layers
-        effective_lora_modules = lora_modules.copy()
-        layers_to_transform = None
-        if lora_ablation_enabled:
-
-            # Get number of layers from model config
-            total_layers = len(model.model.layers)
-            effective_lora_modules, layers_to_transform = filter_lora_modules_for_ablation(
-                lora_modules,
-                enabled=True,
-                ablated_modules=lora_ablation_modules or [],
-                ablated_layers=lora_ablation_layers or [],
-                total_layers=total_layers
-            )
-            logger.info(f"LoRA ablation enabled: filtered modules from {lora_modules} to {effective_lora_modules}")
-
         # Standard LoRA setup (L-1 uses same LoRA, just different loss)
         lora_config = LoraConfig(task_type=TaskType.CAUSAL_LM, r=lora_rank, lora_alpha=lora_alpha, lora_dropout=lora_dropout,
-                                 target_modules=effective_lora_modules, layers_to_transform=layers_to_transform, bias="none")
+                                 target_modules=lora_modules, bias="none")
 
         # Apply LoRA to model
         model = get_peft_model(model, lora_config)
@@ -308,10 +285,7 @@ def build_parscale_model(config, device=None):
     logger.info(f"Setting up {config['training_mode']} training...")
     lora_modules = config.get("lora_modules", ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
     model = setup_peft_model(model, config["P"], config["training_mode"], lora_rank=config["lora_rank"],
-                             use_stream_lora=config["use_stream_lora"], lora_modules=lora_modules,
-                             lora_ablation_enabled=config.get("lora_ablation_enabled", False),
-                             lora_ablation_modules=config.get("lora_ablation_modules", []),
-                             lora_ablation_layers=config.get("lora_ablation_layers", []))
+                             use_stream_lora=config["use_stream_lora"], lora_modules=lora_modules)
     validate_parscale_model(model, config["P"])
     return model, tokenizer
 

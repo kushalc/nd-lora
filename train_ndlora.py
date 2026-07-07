@@ -110,20 +110,10 @@ def parse_args(argv=None):
                         help="Target modules for LoRA. Options: q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj")
     parser.add_argument("--design-layer", type=int, default=16,
                         help="Design layer (l*) for representation decorrelation")
-    parser.add_argument("--lambda-bt", type=float, default=0.1,
+    parser.add_argument("--lambda-bt", type=float, default=0.289,
                         help="Barlow Twins loss weight")
     parser.add_argument("--bt-normalization-warmup", action="store_true",
                         help="Enable warmup/normalization in OrthogonalLoRALoss")
-
-    # LoRA ablation parameters
-    parser.add_argument("--lora-ablation-enabled", action="store_true",
-                        help="Enable LoRA ablation experiments")
-    parser.add_argument("--lora-ablation-modules", type=str, nargs="*", default=[],
-                        help="LoRA modules to ablate (q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj)")
-    parser.add_argument("--lora-ablation-layers", type=int, nargs="*", default=[],
-                        help="Specific layers to ablate (optional)")
-    parser.add_argument("--name", type=str, default=None,
-                        help="Experiment name for W&B logging")
 
     # Logging and evaluation
     parser.add_argument("--log-interval", type=int, default=50,
@@ -149,10 +139,6 @@ def parse_args(argv=None):
                         help="Number of data loading workers")
     parser.add_argument("--test", action="store_true",
                         help="Test mode: disable S3 sync and W&B logging to avoid logspam")
-
-    # Contrastive learning parameters
-    parser.add_argument("--corruption-prob", type=float, default=0.5,
-                        help="Probability of corrupting examples for contrastive learning")
 
     args = parser.parse_args(args=argv)
     args.output_dir = "./outputs/%s" % args.run_id

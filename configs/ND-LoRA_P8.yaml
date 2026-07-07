@@ -4,6 +4,5 @@ use_stream_lora: true
 orthogonal_lora: true
 bt_normalization_warmup: true
 design_layer: 20
-lambda_bt: 0.12656544871427247
 lora_modules: [q_proj, k_proj, v_proj]
 lora_rank: 16

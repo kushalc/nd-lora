@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ablation score analysis for Table 3 - analyzes performance of different variants from parquet data."""
+"""Ablation score analysis for Table 5 - analyzes performance of different variants from parquet data."""
 
 import logging
 

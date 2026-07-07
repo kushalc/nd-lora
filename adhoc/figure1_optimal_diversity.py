@@ -10,7 +10,7 @@ The x-axis shows ΔP (distance from optimal P) and y-axis shows relative perform
 normalized by P=1 baseline.
 
 Repro (R^2=0.943):
-python adhoc/table4_dspec_ablations.py --since=24h
+python adhoc/table5_dspec_ablations.py --since=24h
 python adhoc/figure1_optimal_diversity.py
 """
 
@@ -39,7 +39,7 @@ BASE_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = BASE_DIR / "outputs/assets"
 from statsig_utils import LOCAL_CACHE_DIR as EVALS_DIR  # shared sample-level cache (leaderboard/evals-full/ParControl)
 CACHE_DIR = BASE_DIR / "outputs/.cache/figure1_bootstrap"
-TABLE4_PARQUET = BASE_DIR / "outputs/table4_task_level.parquet"
+TABLE5_PARQUET = BASE_DIR / "outputs/table5_task_level.parquet"
 
 # Setup joblib disk cache for bootstrap computations
 memory = Memory(CACHE_DIR, verbose=0)
@@ -371,16 +371,16 @@ def smooth_asymmetric(x_data: np.ndarray, y_data: np.ndarray, x_grid: np.ndarray
     return weights_normalized @ y_data
 
 
-def load_table4_data() -> pd.DataFrame:
-    """Load table4 parquet and return DataFrame with P index and mean values across tasks."""
-    df = pd.read_parquet(TABLE4_PARQUET)
+def load_table5_data() -> pd.DataFrame:
+    """Load table5 parquet and return DataFrame with P index and mean values across tasks."""
+    df = pd.read_parquet(TABLE5_PARQUET)
     return df.groupby('P').mean()
 
 
 def get_D_spec_for_P(P_values: np.ndarray) -> np.ndarray:
-    """Map P values to their corresponding spectral diversity D_spec from table4 parquet."""
-    table4_df = load_table4_data()
-    D_spec_by_P = table4_df['dspec_cosine']
+    """Map P values to their corresponding spectral diversity D_spec from table5 parquet."""
+    table5_df = load_table5_data()
+    D_spec_by_P = table5_df['dspec_cosine']
     # P=1 uses P=2 value (single stream has no diversity to measure)
     D_spec_map = {1: D_spec_by_P.get(2, D_spec_by_P.iloc[0])} | D_spec_by_P.to_dict()
     # Sort for np.interp
@@ -694,7 +694,8 @@ def generate_optimality_plot(traces_df: pd.DataFrame, samples_df: pd.DataFrame, 
 
     # Average across tasks: for each bootstrap_ix, average all tasks
     # Result: DataFrame with index=delta_P, columns=bootstrap_ix
-    averaged_df = bootstrap_df.groupby(level='boot_ix', axis=1).mean()
+    # pandas >=2.1 removed the `axis=1` kwarg from groupby; transpose to group over columns.
+    averaged_df = bootstrap_df.T.groupby(level='boot_ix').mean().T
 
     # Compute pointwise statistics across bootstrap samples
     stats_df = pd.DataFrame({

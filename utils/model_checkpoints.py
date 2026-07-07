@@ -2,7 +2,7 @@
 
 Everything is keyed by the CLEAN eval-dir / checkpoint name used throughout the
 ndlora bucket (evals/…/P=k/<clean>/ and checkpoints/<clean>/). The analysis scripts
-(analyze_experiments, figure1, table4_dspec) identify a model by its clean eval-dir /
+(analyze_experiments, figure1, table5_dspec) identify a model by its clean eval-dir /
 file name rather than the legacy run-id stored inside each artifact's config.model_name.
 
 Contents are limited to exactly the checkpoints needed to reproduce the paper's
@@ -55,7 +55,7 @@ DISPLAY_NAMES = {
 
 # ── Analysis treatment names: eval-dir name -> "ParControl Q0.5B P=k: <Treatment>" ─
 # analyze_experiments maps each parsed model to this string, then parse_model_metadata
-# splits off (base, P, treatment); table2 / table789 / table4_score / figure1 filter on
+# splits off (base, P, treatment); table2 / table789 / table5_score / figure1 filter on
 # the treatment. Keyed by the eval-DIR name: paper models use clean names; the LoRA-rank
 # sweep (Table 10) kept its run-ids, so those keys are run-ids.
 MODEL_NAMES = {

@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""Generate Table 4 (ablations) D_spec values from evaluation results.
+"""Generate Table 5 (ablations) D_spec values from evaluation results.
 
-Computes spectral diversity (D_spec) for different architectural variants by analyzing
-layer activations from neurodiversity evaluation runs. This script reproduces the exact
-D_spec values used in Table 4 of the paper.
+Computes spectral diversity (the Neural Diversity Index 𝒟 = ``dspec_D``) for different
+architectural variants by analyzing layer activations from neurodiversity evaluation runs.
+This script reproduces the exact 𝒟 column of Table 5 in the paper.
 
 D_spec calculation:
 - Extracts aggregate layer activations from evaluation pickles
 - Computes nanmean across all activation dimensions
 - Averages across all evaluation samples
 
-Variants analyzed:
-- Standard: Repro LoRA R64 (P=1) → D_spec = None (baseline, no diversity)
-- ParScale: SharedLoRA R64 (P=4) → D_spec ≈ 0.999 (minimal diversity)
-- ParScale-BT: nOSL SharedLoRA R64 (P=4) → D_spec ≈ 0.998 (slight improvement)
-- Indep. LoRA: IndLoRA (P=4) → D_spec ≈ 0.231 (stream-aware without BT)
-- ND-LoRA: nOSL IndLoRA (P=4) → D_spec ≈ 0.133 (full method with BT)
+Variants analyzed (𝒟 = dspec_D, lower is more diverse):
+- Standard: Repro LoRA R64 (P=1)       → 𝒟 = None (baseline, no diversity)
+- ParScale: SharedLoRA R64 (P=4)       → 𝒟 ≈ 0.9990 (minimal diversity)
+- ParScale-BT: nOSL SharedLoRA R64 (P=4) → 𝒟 ≈ 0.9988 (slight improvement)
+- Stream LoRA: IndLoRA (P=4)           → 𝒟 ≈ 0.3544 (stream-aware without BT)
+- Stream LoRA-BT: nOSL IndLoRA (P=4)   → 𝒟 ≈ 0.1530 (independent LoRA + BT)
+- ND-LoRA: nOSL IndLoRA KVQ (P=4)      → 𝒟 ≈ 0.4112 (full method, KVQ-targeted)
 """
 
 import argparse
@@ -172,7 +173,7 @@ def load_evaluation_results(eval_dir, since_seconds: float = None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Compute D_spec values for Table 4 ablations')
+    parser = argparse.ArgumentParser(description='Compute D_spec (dspec_D) values for Table 5 ablations')
 
     # Paper Table 4 D (RMS cosine) was computed on the N256n vintage: it is the only suite whose
     # ablation pkls (ParScale-BT, Stream LoRA, Stream LoRA-BT) carry original_dspec_D. The N1024n
@@ -236,6 +237,6 @@ if __name__ == '__main__':
     ndlora_df = raw_df[raw_df['model'].str.startswith('ND-LoRA')].copy()
     ndlora_df['P'] = ndlora_df['model'].str.extract(r'_P(\d+)')[0].astype(int)
     parquet_df = ndlora_df.groupby(['P', "task"])[DSPEC_VARIANTS + ["eval_score"]].mean()
-    output_path = Path("outputs") / "table4_task_level.parquet"
+    output_path = Path("outputs") / "table5_task_level.parquet"
     parquet_df.to_parquet(output_path)
     logging.info("Wrote task-level parquet to %s with shape %s", output_path, parquet_df.shape)

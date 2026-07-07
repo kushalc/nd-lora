@@ -60,10 +60,6 @@ class OrthogonalLoRALoss(nn.Module):
         warmup_steps: int,
         design_layer: int,
         lambda_bt: float = 0.1,
-        lambda_perp: float = 0.5,
-        lambda_kd: float = 0.05,
-        bt_method: str = "mean_vs_others",
-        bt_k: int = None,
         bt_normalization_warmup: bool = False,
     ):
         super().__init__()
@@ -71,10 +67,6 @@ class OrthogonalLoRALoss(nn.Module):
         self.warmup_steps = warmup_steps
         self.design_layer = design_layer
         self.lambda_bt = lambda_bt
-        self.lambda_perp = lambda_perp
-        self.lambda_kd = lambda_kd
-        self.bt_method = bt_method
-        self.bt_k = bt_k if bt_k else P
         self.bt_normalization_warmup = bt_normalization_warmup
 
         if self.bt_normalization_warmup:
@@ -105,13 +97,7 @@ class OrthogonalLoRALoss(nn.Module):
         """
         hidden_states_by_stream = parse_streams_from_batch(hidden_states, self.P)
 
-        # Choose Barlow Twins method based on configuration
-        if self.bt_method == "mean_vs_others":
-            bt_loss = self._compute_barlow_twins_with_mean_vs_others(hidden_states_by_stream)
-        elif self.bt_method == "standard":
-            bt_loss = self._compute_standard_barlow_twins(hidden_states_by_stream)
-        else:
-            raise ValueError(f"Unknown bt_method: {self.bt_method}. Must be 'mean_vs_others' or 'standard'")
+        bt_loss = self._compute_standard_barlow_twins(hidden_states_by_stream)
 
         warmup = 1.0
         normalized_loss = bt_loss
@@ -132,36 +118,8 @@ class OrthogonalLoRALoss(nn.Module):
 
         return total_loss, loss_components
 
-    def _compute_global_variance_scale(self,
-                                       hidden_states_by_stream: torch.Tensor,
-                                       alpha: float = 0.5,
-                                       eps: float = 1e-5) -> torch.Tensor:
-        """
-        Compute global variance scaling factor across streams.
-
-        Args:
-            hidden_states_by_stream: [P, batch, seq, hidden]
-            alpha: Inverse-variance scaling exponent
-            eps: Small constant for numerical stability
-
-        Returns:
-            Scaling factor (detached)
-        """
-        P, B, S, D = hidden_states_by_stream.shape
-        N = B * S
-
-        # Flatten and standardize per stream
-        Z = hidden_states_by_stream.view(P, N, D)
-        Z = (Z - Z.mean(1, keepdim=True)) / (Z.std(1, keepdim=True) + eps)
-
-        # Global variance across streams
-        var_all = Z.var(dim=0, unbiased=False).mean()
-        scale = (var_all + eps).pow(alpha).detach()
-
-        return scale
-
     def _compute_standard_barlow_twins(self, hidden_states_by_stream: torch.Tensor) -> torch.Tensor:
-        """Sample K pairs per stream proportionally to cross-correlation for BT loss."""
+        """Frobenius Barlow Twins loss over all cross-stream pairs."""
         P, batch_size, seqlen, hidden_size = hidden_states_by_stream.shape
         device = hidden_states_by_stream.device
         assert P >= 2, f"Need at least 2 streams for Barlow Twins, got {P}"
@@ -172,86 +130,15 @@ class OrthogonalLoRALoss(nn.Module):
             rep = hidden_states_by_stream[p].view(-1, hidden_states_by_stream.size(-1))
             reps_norm.append((rep - rep.mean(0)) / (rep.std(0) + 1e-8))
 
-        # Sample K pairs per stream
+        # Accumulate the off-diagonal cross-correlation loss for every stream pair
         sampled = []
         I = torch.eye(reps_norm[0].size(-1), device=device)
         for p in range(P):
-            losses = []
             for q in range(p + 1, P):
                 C = torch.mm(reps_norm[p].T, reps_norm[q]) / reps_norm[0].size(0)
-                losses.append(torch.norm(C - I, p='fro'))
-
-            if not losses:
-                continue
-
-            selected = range(len(losses))
-            if self.bt_k < len(losses):
-                k = self.bt_k
-                if self.bt_k < 0:
-                    k = max(len(losses) + self.bt_k, 1)
-                probs = torch.tensor([loss.detach() for loss in losses], device=device)
-                selected = torch.multinomial(probs, k, replacement=False)
-            sampled += [losses[j] for j in selected]
+                sampled.append(torch.norm(C - I, p='fro'))
 
         hidden_factor = hidden_size * (hidden_size - 1) / 2
         bt_loss = sum(sampled) / len(sampled) / hidden_factor * 4096
 
         return bt_loss
-
-    def _compute_barlow_twins_with_mean_vs_others(self,
-                                                  hidden_states_by_stream: torch.Tensor) -> torch.Tensor:
-        """
-        Compute mean-of-others Barlow Twins loss: (1/P) Σ_p ||C(p, mean_{q≠p}) - I||_F^2
-
-        Args:
-            hidden_states_by_stream: [P, batch, seq, hidden]
-
-        Returns:
-            Barlow Twins loss tensor
-        """
-        P, batch_size, seqlen, hidden_size = hidden_states_by_stream.shape
-        assert P >= 2, f"Need at least 2 streams for Barlow Twins, got {P}"
-
-        # Extract representations at design layer (already extracted per stream)
-        reps = []
-        for p in range(P):
-            rep = hidden_states_by_stream[p]  # (batch, seq, hidden)
-            rep_flat = rep.view(-1, rep.size(-1))  # (batch*seq, hidden)
-            reps.append(rep_flat)
-
-        # Stack all representations: [P, N, D]
-        Z = torch.stack(reps, dim=0)
-
-        # Per-stream standardization (zero mean, unit variance)
-        Z_norm = (Z - Z.mean(dim=1, keepdim=True)) / (Z.std(dim=1, keepdim=True) + 1e-8)
-
-        # Precompute sum over streams for efficient mean-of-others
-        sum_Z = Z_norm.sum(dim=0, keepdim=True)  # [1, N, D]
-
-        bt_loss = torch.tensor(0.0, device=hidden_states_by_stream.device, requires_grad=True)
-        for p in range(P):
-            rep_p = Z_norm[p]  # (N, D)
-            # Mean of all other streams
-            rep_mean_others = (sum_Z[0] - rep_p) / (P - 1)  # (N, D)
-
-            # Cross-correlation matrix
-            N = rep_p.size(0)
-            C = torch.mm(rep_p.T, rep_mean_others) / N  # (D, D)
-
-            # Identity matrix
-            I = torch.eye(C.size(0), device=C.device, dtype=C.dtype)
-
-            # Full Barlow Twins loss (C - I)
-            bt_loss = bt_loss + torch.norm(C - I, p='fro') ** 2
-
-        # Normalize by hidden size & # of stream combinations
-        stream_count = hidden_states_by_stream.shape[0]
-        stream_combinations = stream_count * (stream_count - 1) / 2
-        hidden_factor = hidden_size * (hidden_size - 1) / 2
-        scaled_loss = bt_loss / stream_combinations / hidden_factor
-
-        # Normalize by inverse variance
-        variance_scale = self._compute_global_variance_scale(hidden_states_by_stream)
-        normed_loss = scaled_loss / variance_scale
-
-        return normed_loss

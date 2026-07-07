@@ -114,15 +114,6 @@ def parse_args(argv=None):
                         help="Design layer (l*) for representation decorrelation")
     parser.add_argument("--lambda-bt", type=float, default=0.1,
                         help="Barlow Twins loss weight")
-    parser.add_argument("--lambda-perp", type=float, default=0.5,
-                        help="Orthogonality penalty weight")
-    parser.add_argument("--lambda-kd", type=float, default=0.05,
-                        help="Knowledge distillation loss weight")
-    parser.add_argument("--bt-method", type=str, default="standard",
-                        choices=["mean_vs_others", "standard"],
-                        help="Barlow Twins method: mean_vs_others (MvOi) or standard")
-    parser.add_argument("--bt-k", type=int,
-                        help="Most correlated K streams for which to add Barlow-Twins loss")
     parser.add_argument("--bt-normalization-warmup", action="store_true",
                         help="Enable warmup/normalization in OrthogonalLoRALoss")
 
@@ -154,14 +145,10 @@ def parse_args(argv=None):
                         help="Remote directory for checkpoints and logs, generally only used for Colab sessions")
     parser.add_argument("--config", type=str, default=None,
                         help="Path to YAML configuration file")
-    parser.add_argument("--low-memory-mode", dest="high_memory_mode", action="store_false",
-                        help="Disable high-memory optimizations (use low-memory data loading)")
     parser.add_argument("--memory-debug", action="store_true",
                         help="Enable detailed memory diagnostics and OOM prediction")
-    parser.add_argument("--compile-model", action="store_true",
-                        help="Enable model compilation for speedup (auto-enabled with high-memory mode)")
     parser.add_argument("--num-workers", type=int, default=None,
-                        help="Number of data loading workers (auto-set based on memory mode)")
+                        help="Number of data loading workers")
     parser.add_argument("--test", action="store_true",
                         help="Test mode: disable S3 sync and W&B logging to avoid logspam")
 
@@ -192,23 +179,17 @@ def parse_args(argv=None):
                              'buffer_size', 'num_workers', 'log_interval', 'eval_interval',
                              'save_interval', 'lora_layers_start', 'lora_layers_end', 'lora_rank', 'design_layer']:
                     value = int(value)
-                elif key in ['high_memory_mode', 'wandb_offline', 'memory_debug', 'compile_model']:
+                elif key in ['wandb_offline', 'memory_debug']:
                     value = bool(value)
                 setattr(args, key, value)
 
-    # High-memory mode only affects data loading strategy, not user parameters
-    if args.high_memory_mode:
-        logger.info("High-memory mode enabled - will use optimized data loading")
-        if args.compile_model is None:
-            args.compile_model = True
-
-    # Set minimal defaults only for parameters that truly need them
+    # Data-loading defaults (high-throughput settings used for all paper runs)
     if args.num_workers is None:
-        args.num_workers = 4 if args.high_memory_mode else 0
+        args.num_workers = 4
     if not hasattr(args, 'prefetch_factor') or args.prefetch_factor is None:
-        args.prefetch_factor = 8 if args.high_memory_mode else 2
+        args.prefetch_factor = 8
     if not hasattr(args, 'target_batch_tokens') or args.target_batch_tokens is None:
-        args.target_batch_tokens = 65536 if args.high_memory_mode else 8192
+        args.target_batch_tokens = 65536
 
     # Handle test mode: disable S3 sync and W&B
     if args.test:
@@ -562,8 +543,7 @@ def run_experiment(
     log_run_header(logger, config)
 
     # Setup device and mixed precision
-    device, scaler = setup_gpu_training(high_memory_mode=config.get("high_memory_mode", False),
-                                        enable_mixed_precision=True)
+    device, scaler = setup_gpu_training(high_memory_mode=True, enable_mixed_precision=True)
     config["device"] = device
     logger.info(f"Using device: {device}")
 
@@ -571,22 +551,6 @@ def run_experiment(
     logger.info("Loading base model and tokenizer...")
     memory_monitor.log_memory("before_model_load", -1)
     model, tokenizer = build_parscale_model(config)
-
-    # Compile model for speedup (auto-enabled with high-memory-mode or explicit flag)
-    should_compile = config.get("compile_model", False)
-    if should_compile:
-        logger.info("Compiling model for speedup...")
-        try:
-            # Use torch.compile with aggressive optimizations
-            model = torch.compile(
-                model,
-                mode="max-autotune",  # Aggressive optimization for A100
-                fullgraph=False,      # Allow graph breaks for compatibility with PEFT
-                dynamic=True          # Handle dynamic shapes from variable seq lengths
-            )
-            logger.info("Model compilation successful - expect 10-20% speedup")
-        except Exception as e:
-            logger.warning("Model compilation failed, continuing without compilation", exc_info=True)
 
     # Log parameter counts
     param_info = count_trainable_parameters(model)
@@ -885,8 +849,6 @@ def main(argv=None):
     args = parse_args(argv)
     check_git_repo_clean()
     modal_run_experiment.remote(args.P, vars(args))
-
-
 
 
 # == comparable set for P=1

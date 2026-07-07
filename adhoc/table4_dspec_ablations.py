@@ -174,10 +174,12 @@ def load_evaluation_results(eval_dir, since_seconds: float = None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Compute D_spec values for Table 4 ablations')
 
-    # N16n 11/28 -> spectral diversity, N128n 11/28 -> Frobenius norm
-    parser.add_argument('--eval-dir', type=Path, default='outputs/neurodiversity/evals-N1024n',
+    # Paper Table 4 D (RMS cosine) was computed on the N256n vintage: it is the only suite whose
+    # ablation pkls (ParScale-BT, Stream LoRA, Stream LoRA-BT) carry original_dspec_D. The N1024n
+    # ablation pkls predate the RMS-cos code and store only mean cosine, so D comes back NaN there.
+    parser.add_argument('--eval-dir', type=Path, default='outputs/neurodiversity/evals-N256n',
                         help='Directory containing evaluation .pkl files')
-    parser.add_argument("--s3-base-path", type=str, nargs="+", default=[f"{S3_BUCKET}/evals/neurodiversity/evals-N1024n"],
+    parser.add_argument("--s3-base-path", type=str, nargs="+", default=[f"{S3_BUCKET}/evals/neurodiversity/evals-N256n"],
                         help="S3 path for syncing model results")
     parser.add_argument("--since", type=str, default=None,
                         help="Only include files modified within this duration (e.g. '1h', '30m', '2d')")
@@ -201,8 +203,14 @@ if __name__ == '__main__':
         logging.info("Filtered to %d tasks matching '%s': %s", len(matched_tasks), args.task_regex, matched_tasks.tolist())
         raw_df = raw_df[task_mask]
 
-    # if conflict, use most recent one; FIXME: don't fail silently.
-    raw_df = raw_df.sort_values(["model", "task", "path_mtime"], ascending=False).drop_duplicates(["model", "task"], keep="first")
+    # On conflict, keep the seed that actually carries the paper's D (RMS cosine): each (model, task)
+    # has one pkl re-evaluated with the RMS-cos code (dspec_D present) and, for some, an older seed
+    # where dspec_D is NaN. Prefer the dspec_D-bearing row, breaking ties by most-recent mtime.
+    # (The original relied on mtime alone, which is fragile once files are re-copied and mtimes reset.)
+    raw_df["_has_D"] = raw_df["dspec_D"].notna()
+    raw_df = (raw_df.sort_values(["model", "task", "_has_D", "path_mtime"], ascending=[True, True, False, False])
+                    .drop_duplicates(["model", "task"], keep="first")
+                    .drop(columns="_has_D"))
     display_cols = ["model", "task", "path", "path_mtime", "n_samples", "eval_score"] + DSPEC_VARIANTS
     logging.info("Captured %d raw samples:\n%s", len(raw_df),
                  raw_df[display_cols].set_index(["model", "task"]).sort_index().to_string())

@@ -9,7 +9,7 @@ import random
 import time
 
 from leaderboard.backend_cli import app, evaluate_all_models, parse_args
-from utils.model_checkpoints import BASE_CHECKPOINTS, ALL_CHECKPOINTS as MODEL_CHECKPOINTS, S3_BUCKET
+from utils.model_checkpoints import ALL_CHECKPOINTS as MODEL_CHECKPOINTS, S3_BUCKET
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(funcName)s %(message)s', level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -21,15 +21,6 @@ def modal__test():
         "--sample-limit=5",
         "Qwen/Qwen2.5-0.5B",
         f"{S3_BUCKET}/checkpoints/2025-09-14-15-20-01",
-    ]))
-    evaluate_all_models.remote(**kwargs)
-
-
-@app.local_entrypoint()
-def modal__Qwen():
-    kwargs = vars(parse_args([
-        "Qwen/Qwen2.5-0.5B",
-        "Qwen/Qwen2.5-1.5B",
     ]))
     evaluate_all_models.remote(**kwargs)
 

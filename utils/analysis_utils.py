@@ -664,11 +664,8 @@ def parse_leaderboard_results(
 
     if model_whitelist is None:
         model_whitelist = [
-            "mistralai/Mistral-7B-v0.1",
-            "meta-llama/Llama-2-7b-hf",
             "ParControl/",
             "Qwen/Qwen2.5-0.5B",
-            "Qwen/Qwen2.5-1.5B",
         ]
 
     if model_name_mapping is None:

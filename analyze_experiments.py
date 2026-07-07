@@ -32,12 +32,6 @@ PUB_EVAL_BLACKLIST = {
     "True-False",
 }
 
-PUB_MODEL_BLACKLIST = [
-    "MvO",
-    "CAG",
-    "RandK3",
-]
-
 
 def parse_model_metadata(name):
     """Extract model metadata from column names."""
@@ -374,8 +368,7 @@ def filter_dataframe_by_type(df, data_map, plot_type):
             elif plot_type == 'rc' and ('RACE' in dataset_name or 'SQuAD' in dataset_name):
                 include = True
             elif plot_type == "pub":
-                include = (all(not re.search(pat, dataset_name) for pat in PUB_EVAL_BLACKLIST) and
-                           all(not re.search(pat, model_name) for pat in PUB_MODEL_BLACKLIST))
+                include = all(not re.search(pat, dataset_name) for pat in PUB_EVAL_BLACKLIST)
 
             if include:
                 if dataset_metric not in filtered_map:
@@ -412,11 +405,8 @@ def main():
     parser.add_argument("--no-download", dest="download_repos", action="store_false", help="Skip downloading from HF & S3")
     parser.add_argument("--model-whitelist", nargs="+", help="Model name patterns to include",
                         default=[
-                            "mistralai/Mistral-7B-v0.1",
-                            "meta-llama/Llama-2-7b-hf",
                             "ParControl/",
                             "Qwen/Qwen2.5-0.5B",
-                            "Qwen/Qwen2.5-1.5B",
                         ])
     parser.add_argument("--s3-base-path", type=str, default=f"{S3_BUCKET}/evals",
                         help="S3 path for syncing ParControl model results")

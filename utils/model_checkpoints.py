@@ -92,6 +92,4 @@ MODEL_SPACERS = [
 # Base model checkpoints (HF hub ids)
 BASE_CHECKPOINTS = [
     "Qwen/Qwen2.5-0.5B",
-    "Qwen/Qwen2.5-1.5B",
-    "Qwen/Qwen2.5-3B",
 ]

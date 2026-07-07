@@ -1,10 +1,11 @@
 """
-Weights & Biases setup and utilities for ParScale experiments.
+Weights & Biases setup and utilities for ND-LoRA experiments.
 Handles initialization, run naming, and artifact management.
 """
 
 import logging
 import os
+import platform
 import subprocess
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -14,6 +15,8 @@ import torch
 
 import wandb
 
+from utils.model_checkpoints import WANDB_PROJECT
+
 
 def setup_wandb(
     config: Dict[str, Any],
@@ -21,7 +24,7 @@ def setup_wandb(
     tokens_M: float,
     seq_len: int,
     seed: int,
-    project: str = "ParControl",
+    project: str = WANDB_PROJECT,
     group: str = "qwen25-0.5b_ctp",
     job_type: str = "train",
     offline_mode: bool = False,
@@ -71,7 +74,7 @@ def setup_wandb(
     # Log additional metadata
     wandb.config.update({
         "git_commit": git_commit,
-        "python_version": f"{torch.version.__version__}",
+        "python_version": platform.python_version(),
         "pytorch_version": torch.__version__,
         "device": "mps" if torch.backends.mps.is_available() else "cpu",
         "system_info": get_system_info()

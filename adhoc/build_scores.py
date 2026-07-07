@@ -3,8 +3,8 @@
 
 The figure/table scripts consume ``plots/<plot_type>-<mode>-single-stream.parquet``
 (e.g. ``plots/pub-full-single-stream.parquet``). Rather than committing those
-artifacts, we regenerate them from the raw per-sample eval JSON that lives in
-``s3://obviouslywrong-ndlora/evals/evals-<mode>/`` by driving ``analyze_experiments.py``
+artifacts, we regenerate them from the raw per-sample eval JSON that lives under
+``{S3_BUCKET}/evals/evals-<mode>/`` by driving ``analyze_experiments.py``
 (which syncs the raw evals and writes the parquet at ``analyze_experiments.py:460``).
 
 Usage (import):
@@ -16,10 +16,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from utils.model_checkpoints import S3_BUCKET
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLOTS_DIR = REPO_ROOT / "plots"
 RESULTS_BASE = REPO_ROOT / "leaderboard"           # analyze reads results_base_path/evals-<mode>
-S3_EVALS_BASE = "s3://obviouslywrong-ndlora/evals"
+S3_EVALS_BASE = f"{S3_BUCKET}/evals"
 BASELINE_MODE = "single-stream"
 
 

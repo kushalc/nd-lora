@@ -28,6 +28,7 @@ from leaderboard.src.backend.manage_requests import EvalRequest
 from leaderboard.src.backend.run_eval_suite import run_evaluation
 from leaderboard.src.utils import get_tasks_by_benchmarks
 from utils.checkpoint_utils import check_and_download_from_s3, upload_to_s3
+from utils.model_checkpoints import MODAL_APP, S3_BUCKET
 from utils.stream_aware_lora import parse_streams_from_batch
 
 MODAL_GPU = "A10G"  # A10G for better memory and performance
@@ -40,7 +41,7 @@ MODAL_IMAGE = modal.Image.debian_slim(python_version="3.10") \
     .add_local_dir(Path(__file__).parent / "leaderboard/src", "/root/src") \
     .add_local_dir(Path(__file__).parent / "utils", "/root/utils") \
     .add_local_dir(Path(__file__).parent / "ParScale", "/root/ParScale")
-app = modal.App("ParControl-Causality")
+app = modal.App(f"{MODAL_APP}-Causality")
 
 
 def get_module_by_name(model, module_name: str):
@@ -468,7 +469,7 @@ def run_instrumented_evaluation(model_names: List[str], target_layer: str, tasks
         ]
     )
 
-    logging.info("Setting system-wide psuedo-RNG seed to %d", seed)
+    logging.info("Setting system-wide pseudo-RNG seed to %d", seed)
     np.random.seed(seed)
     random.seed(seed)
 
@@ -619,11 +620,11 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="PyTorch hook-based activation recording during evaluation")
     parser.add_argument("--model-names", nargs="+", help="Model name or S3 path",
                         default=[
-                            "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4",
-                            "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_Original",
-                            "s3://obviouslywrong-ndlora/checkpoints/ParScale-BT_P4",
-                            "s3://obviouslywrong-ndlora/checkpoints/Stream_LoRA_P4",
-                            "s3://obviouslywrong-ndlora/checkpoints/ParScale_P4_R64",
+                            f"{S3_BUCKET}/checkpoints/ND-LoRA_P4",
+                            f"{S3_BUCKET}/checkpoints/ND-LoRA_P4_Original",
+                            f"{S3_BUCKET}/checkpoints/ParScale-BT_P4",
+                            f"{S3_BUCKET}/checkpoints/Stream_LoRA_P4",
+                            f"{S3_BUCKET}/checkpoints/ParScale_P4_R64",
                         ])
     parser.add_argument("--target-layer", type=str, default="model.model.norm",
                         help="Target layer for monitoring and optional corruption")
@@ -642,7 +643,7 @@ def parse_args(argv=None):
     parser.add_argument("--resamplings", type=int, default=16,
                         help="Number of bootstrap resamplings to take")
     parser.add_argument("--limit", type=int, default=128, help="Sample limit per task")
-    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-ndlora/evals/neurodiversity",
+    parser.add_argument("--s3-base-dir", type=str, default=f"{S3_BUCKET}/evals/neurodiversity",
                         help="S3 base directory for uploading results")
     parser.add_argument("--force", action="store_true",
                         help="Force re-evaluation even if results exist")
@@ -763,7 +764,10 @@ def do_dose_response_evaluation(dose_steps=5, **kwargs) -> Dict:
     else:
         raise ValueError(f"Dose-response not supported for corruption_mode: {corruption_mode}")
     metadata["sweep_param"] = param_name
-    metadata["sweep_values"] = list(sweep_values) + [P-1]  # Note: Added P-1 to maintain hash consistency
+    recorded_values = list(sweep_values)
+    if corruption_mode == "stream":
+        recorded_values = recorded_values + [P-1]  # Note: keep P-1 for hash consistency with prior stream runs
+    metadata["sweep_values"] = recorded_values
     metadata_digest = hashlib.sha256(str(sorted(metadata.items())).encode()).hexdigest()[:6]
 
     logging.warning("Sweeping %s=%s; ignoring specified inputs", param_name, sweep_values)

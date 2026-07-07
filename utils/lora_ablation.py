@@ -31,7 +31,7 @@ def filter_lora_modules_for_ablation(
         return lora_modules, None
     
     if not total_layers:
-        raise("Total Layers missing, must be passed in prior to ablation filtering.")
+        raise ValueError("Total Layers missing, must be passed in prior to ablation filtering.")
    
     if not ablated_modules and not ablated_layers:
         logger.warning("LoRA ablation enabled but no modules or layers specified")

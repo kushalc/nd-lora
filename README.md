@@ -38,9 +38,6 @@ cd nd-lora
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Initialize ParScale submodule
-git submodule update --init --recursive
 ```
 
 ## Quick Start
@@ -168,9 +165,8 @@ modal run train_ndlora::modal__p4_nOSL_ablation__modules
 ### Evaluation
 
 ```bash
-# Deep evaluation (N=1024 samples per task)
-cd leaderboard
-python eval-cli.py --checkpoint CHECKPOINT_PATH --mode deep
+# Deep evaluation (N=1024 samples per task) via Modal
+modal run eval_experiments.py::modal__dParControl
 
 # Corruption experiments for causality analysis
 python eval_neurodiversity.py \
@@ -204,7 +200,7 @@ nd-lora/
 ├── train_ndlora.py           # Main training script with Modal entrypoints
 ├── eval_experiments.py          # Hallucination benchmark evaluation
 ├── eval_neurodiversity.py       # Causality experiments (corruption analysis)
-├── ParScale/                    # Core ParScale implementation (submodule)
+├── ParScale/                    # Core ParScale implementation (vendored)
 ├── utils/
 │   ├── model_checkpoints.py        # Paper-repro model checkpoints (single source of truth)
 │   ├── model_utils.py           # Model loading and PEFT setup

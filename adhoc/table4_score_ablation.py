@@ -30,7 +30,7 @@ def analyze_ablation_scores(df, variants, metrics):
 
             # Calculate average score across hallucination metrics using vectorized operations
             # Verify all metrics exist
-            missing_metrics = set(halluc_metrics) - set(df_variant.columns)
+            missing_metrics = set(metrics) - set(df_variant.columns)
             assert not missing_metrics, f"Metrics not found in columns: {missing_metrics}"
 
             metric_values = df_variant[metrics].iloc[0]

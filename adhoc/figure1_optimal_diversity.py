@@ -37,7 +37,7 @@ warnings.filterwarnings('ignore', category=RuntimeWarning, module='statsmodels')
 
 BASE_DIR = Path(__file__).parent.parent
 OUTPUT_DIR = BASE_DIR / "paper/assets"
-EVALS_DIR = BASE_DIR / "outputs/evals-full/ParControl"
+from statsig_utils import LOCAL_CACHE_DIR as EVALS_DIR  # shared sample-level cache (leaderboard/evals-full/ParControl)
 CACHE_DIR = BASE_DIR / "outputs/.cache/figure1_bootstrap"
 TABLE4_PARQUET = BASE_DIR / "outputs/table4_task_level.parquet"
 
@@ -820,7 +820,6 @@ def generate_optimality_plot(traces_df: pd.DataFrame, samples_df: pd.DataFrame, 
     # Mark the optimal point at delta_P=0 and baseline at P=1
     ax.axvline(x=0, color='red', linestyle='--', alpha=0.5, linewidth=1.5, label='Optimal P', zorder=3)
     ax.axhline(y=plot_df["mean"].max() - 1, color='red', linestyle='--', alpha=0.5, linewidth=1.5, zorder=3)
-    # ax.axhline(y=1.0, color='black', linestyle='--', alpha=0.5, linewidth=1.5, label='P=1', zorder=3)
 
     ax.set_xlabel('$\Delta P$ (Distance from Optimal Neural Diversity)', fontsize=10)
     ax.set_ylabel('Reliability', fontsize=10)
@@ -839,7 +838,6 @@ def generate_optimality_plot(traces_df: pd.DataFrame, samples_df: pd.DataFrame, 
     plt.savefig(output_dir / 'figure1_optimal_diversity.pdf', dpi=600, bbox_inches='tight')
 
     logger.info("Saved figure to %s", output_dir)
-    # plt.show()
 
 
 def main():

@@ -82,11 +82,6 @@ class OrthogonalLoRALoss(nn.Module):
         else:
             self.normalizer = None
 
-        # Normalizers for each component
-        # self.bt_normalizer = RunningMeanNormalizer(target=5.0)
-        # self.orth_normalizer = RunningMeanNormalizer(target=5.0)
-        # self.kd_normalizer = RunningMeanNormalizer(target=5.0)
-
     def forward(
         self,
         step: int,
@@ -118,9 +113,6 @@ class OrthogonalLoRALoss(nn.Module):
         else:
             raise ValueError(f"Unknown bt_method: {self.bt_method}. Must be 'mean_vs_others' or 'standard'")
 
-        # orth_loss = self._compute_orthogonality_penalty(model)
-        # kd_loss = self._compute_kd_loss(logits_agg, logits_backbone)
-
         warmup = 1.0
         normalized_loss = bt_loss
         if self.bt_normalization_warmup:
@@ -135,7 +127,6 @@ class OrthogonalLoRALoss(nn.Module):
         loss_components = {
             "loss/bt": normalized_loss,
             "loss/bt_raw": bt_loss,
-            # "loss/orth": orth_loss,
             "loss/total": total_loss
         }
 
@@ -264,70 +255,3 @@ class OrthogonalLoRALoss(nn.Module):
         normed_loss = scaled_loss / variance_scale
 
         return normed_loss
-
-    def _compute_kd_loss(self, logits_agg: torch.Tensor, logits_backbone: torch.Tensor) -> torch.Tensor:
-        """
-        Compute KL divergence: KL(softmax(z_agg) || softmax(z_backbone))
-
-        Args:
-            logits_agg: ParScale aggregated logits
-            logits_backbone: Backbone model logits
-
-        Returns:
-            KL divergence loss
-        """
-        # Reshape to (batch*seq, vocab) if needed
-        if logits_agg.dim() > 2:
-            logits_agg = logits_agg.view(-1, logits_agg.size(-1))
-        if logits_backbone.dim() > 2:
-            logits_backbone = logits_backbone.view(-1, logits_backbone.size(-1))
-
-        assert logits_agg.shape == logits_backbone.shape, \
-            f"Shape mismatch: {logits_agg.shape} vs {logits_backbone.shape}"
-
-        # Convert to probabilities
-        log_probs_agg = F.log_softmax(logits_agg, dim=-1)
-        probs_backbone = F.softmax(logits_backbone, dim=-1)
-
-        # KL divergence
-        kl_loss = F.kl_div(log_probs_agg, probs_backbone, reduction='batchmean')
-
-        return kl_loss
-
-    def _compute_orthogonality_penalty(self, model) -> torch.Tensor:
-        """
-        Compute Frobenius orthogonality penalty from PEFT LoRA matrices.
-
-        For now, we'll use a simple approach: penalize the norm of LoRA matrices
-        to encourage sparsity. This is a placeholder for true orthogonality.
-
-        Args:
-            model: PEFT model with LoRA
-
-        Returns:
-            Orthogonality penalty tensor
-        """
-        penalty = torch.tensor(0.0, device=next(model.parameters()).device, requires_grad=True)
-
-        # Collect all LoRA A matrices and compute pairwise orthogonality
-        lora_A_matrices = []
-
-        for name, module in model.named_modules():
-            if hasattr(module, 'lora_A') and hasattr(module, 'default'):
-                # This is a LoRA layer
-                lora_A = module.lora_A['default'].weight  # (rank, in_features)
-                lora_A_matrices.append(lora_A)
-
-        # Compute pairwise orthogonality penalty
-        for i in range(len(lora_A_matrices)):
-            for j in range(i + 1, len(lora_A_matrices)):
-                A_i = lora_A_matrices[i]  # (rank, in_features)
-                A_j = lora_A_matrices[j]  # (rank, in_features)
-
-                # Only compare if they have the same shape
-                if A_i.shape == A_j.shape:
-                    # Compute ||A_i^T A_j||_F^2
-                    cross_product = torch.mm(A_i, A_j.T)  # (rank, rank)
-                    penalty = penalty + torch.norm(cross_product, p='fro') ** 2
-
-        return penalty

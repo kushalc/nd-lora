@@ -12,10 +12,12 @@ from pathlib import Path
 import numpy as np
 from scipy import stats
 
+from utils.model_checkpoints import S3_BUCKET
+
 # S3 and local cache configuration.
 # Raw sample-level eval results live under evals/evals-full/ParControl/P=k/<clean-model-name>/
 # in the ndlora bucket; sync_s3_to_local pulls them on demand (no pre-baked parquet).
-S3_BASE_PATH = 's3://obviouslywrong-ndlora/evals/evals-full/ParControl'
+S3_BASE_PATH = f'{S3_BUCKET}/evals/evals-full/ParControl'
 # Shared with build_scores' sync target so table1/table2 reuse the same local copy.
 LOCAL_CACHE_DIR = Path(__file__).resolve().parent.parent / 'leaderboard/evals-full/ParControl'
 
@@ -46,8 +48,16 @@ BINARY_TASKS = {'halueval_dialogue', 'halueval_qa', 'halueval_summarization', 'm
 
 
 def sync_s3_to_local(force: bool = False) -> None:
-    """Sync S3 evals-full directory to local cache."""
+    """Sync S3 evals-full directory to local cache.
+
+    If the cache is already populated and force=False, skip the sync — over a slow link an
+    incremental `aws s3 sync` is expensive (and would re-download reconstructed aggregate-only
+    files whose local size differs from S3). Use force=True to refresh.
+    """
     LOCAL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    if not force and any(LOCAL_CACHE_DIR.rglob('results_*.json')):
+        logging.info("Using populated local cache (skip sync): %s", LOCAL_CACHE_DIR)
+        return
     logging.info("Syncing S3 to local cache: %s -> %s", S3_BASE_PATH, LOCAL_CACHE_DIR)
     subprocess.run(['aws', 's3', 'sync', S3_BASE_PATH, str(LOCAL_CACHE_DIR),
                     '--exclude', '*all_results_*'], check=True)

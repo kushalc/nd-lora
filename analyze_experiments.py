@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
-Analyze ParScale experiments and generate leaderboard plots.
+Analyze ND-LoRA experiments and generate leaderboard plots.
 Combines data parsing from leaderboard results with plotting for absolute and relative scores.
-
-RUN THIS:
-source .env; ./analyze_experiments.py; open plots/pub-full-*.png
 """
 
 import argparse
@@ -20,7 +17,7 @@ import pandas as pd
 import seaborn as sns
 
 from utils.analysis_utils import parse_leaderboard_results
-from utils.model_checkpoints import MODEL_NAMES
+from utils.model_checkpoints import MODEL_NAMES, S3_BUCKET
 
 BASELINE_RANK = {
     "P=1": "R16",
@@ -36,7 +33,6 @@ PUB_EVAL_BLACKLIST = {
 }
 
 PUB_MODEL_BLACKLIST = [
-    # r"\bOSL IndLoRA\b",
     "MvO",
     "CAG",
     "RandK3",
@@ -422,7 +418,7 @@ def main():
                             "Qwen/Qwen2.5-0.5B",
                             "Qwen/Qwen2.5-1.5B",
                         ])
-    parser.add_argument("--s3-base-path", type=str, default="s3://obviouslywrong-ndlora/evals",
+    parser.add_argument("--s3-base-path", type=str, default=f"{S3_BUCKET}/evals",
                         help="S3 path for syncing ParControl model results")
 
     parser.add_argument("--plot-mode", nargs="+", choices=['all', "pub", 'summ', 'qa', 'instr', 'detect', 'rc'],

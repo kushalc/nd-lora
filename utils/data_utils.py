@@ -98,9 +98,6 @@ def create_pile_dataset(
             "attention_mask": tokenized["attention_mask"].squeeze(),
             "labels": tokenized["input_ids"].squeeze(),  # For causal LM
             "is_corrupted": False,
-            # "corruption_types": [],
-            # "original_text": example["text"],
-            # "corrupted_text": None
         }
 
         if corruption:
@@ -117,9 +114,6 @@ def create_pile_dataset(
                 "attention_mask": tokenized["attention_mask"].squeeze(),
                 "labels": tokenized["input_ids"].squeeze(),
                 "is_corrupted": True,
-                # "corruption_types": corruption_types,
-                # "original_text": example["text"],
-                # "corrupted_text": corrupted_text
             }
 
 
@@ -275,93 +269,3 @@ class TokenBudgetTracker:
     def is_complete(self) -> bool:
         """Check if target tokens have been reached."""
         return self.processed_tokens >= self.target_tokens
-
-
-def collate_contrastive_batch(batch: List[Dict]) -> Dict[str, Any]:
-    """
-    Custom collate function for contrastive batches.
-    Groups corrupted and original examples separately for loss computation.
-
-    Args:
-        batch: List of dataset examples
-
-    Returns:
-        Collated batch with separated corrupted/original examples
-    """
-    import torch
-
-    # Separate corrupted and original examples
-    corrupted_examples = [ex for ex in batch if ex["is_corrupted"]]
-    original_examples = [ex for ex in batch if not ex["is_corrupted"]]
-
-    def stack_examples(examples: List[Dict]) -> Optional[Dict[str, torch.Tensor]]:
-        if not examples:
-            return None
-
-        return {
-            "input_ids": torch.stack([ex["input_ids"] for ex in examples]),
-            "attention_mask": torch.stack([ex["attention_mask"] for ex in examples]),
-            "labels": torch.stack([ex["labels"] for ex in examples])
-        }
-
-    # Stack examples by type
-    corrupted_batch = stack_examples(corrupted_examples)
-    original_batch = stack_examples(original_examples)
-
-    # Collect corruption metadata
-    corruption_metadata = {
-        "corruption_types": [ex["corruption_types"] for ex in corrupted_examples],
-        "num_corrupted": len(corrupted_examples),
-        "num_original": len(original_examples)
-    }
-
-    return {
-        "corrupted": corrupted_batch,
-        "original": original_batch,
-        "metadata": corruption_metadata,
-        "batch_size": len(batch)
-    }
-
-
-def get_contrastive_stats(dataloader, num_batches: int = 100) -> Dict[str, Any]:
-    """
-    Analyze contrastive dataset statistics.
-
-    Args:
-        dataloader: Contrastive DataLoader
-        num_batches: Number of batches to analyze
-
-    Returns:
-        Statistics dictionary
-    """
-    corruption_counts = {"temporal": 0, "numerical": 0, "negation": 0, "entity": 0}
-    total_corrupted = 0
-    total_original = 0
-
-    logger.info(f"Analyzing {num_batches} batches for contrastive statistics")
-
-    for i, batch in enumerate(dataloader):
-        if i >= num_batches:
-            break
-
-        for example in batch:
-            if example["is_corrupted"]:
-                total_corrupted += 1
-                for corruption_type in example["corruption_types"]:
-                    corruption_counts[corruption_type] += 1
-            else:
-                total_original += 1
-
-    total_examples = total_corrupted + total_original
-
-    stats = {
-        "total_examples": total_examples,
-        "corrupted_examples": total_corrupted,
-        "original_examples": total_original,
-        "corruption_ratio": total_corrupted / total_examples if total_examples > 0 else 0.0,
-        "corruption_type_counts": corruption_counts,
-        "avg_corruptions_per_example": sum(corruption_counts.values()) / max(total_corrupted, 1)
-    }
-
-    logger.info(f"Dataset stats: {stats}")
-    return stats

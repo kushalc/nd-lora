@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-LoRA Rank Confound Analysis for Reviewer 3HiA
+LoRA Rank Confound Analysis
 
 Generates:
 1. Figure: Performance vs rank at equal scaling (α=2r) - shows rank doesn't determine performance
 2. Table: Decomposition comparing α=2r vs α=32 across ranks
 
 Usage:
-    python adhoc/lora_rank_confound_analysis.py [--no-ci]
+    python adhoc/table10_lora_confounders.py [--no-ci]
 """
 
 import argparse

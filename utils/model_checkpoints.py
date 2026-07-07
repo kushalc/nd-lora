@@ -9,29 +9,29 @@ Contents are limited to exactly the checkpoints needed to reproduce the paper's
 figures and tables. Base model = Qwen2.5-0.5B, 20M tokens of The Pile.
 """
 
+# ── Storage / experiment-tracking roots (single source of truth) ─────────────────
+# The bucket root and the Modal/W&B experiment tag are imported by the training,
+# eval, analysis, and figure scripts so the location lives in exactly one place.
+S3_BUCKET = "s3://obviouslywrong-ndlora"
+MODAL_APP = "ParControl"       # Modal application / experiment codename
+WANDB_PROJECT = "ParControl"   # W&B project (same experiment tag)
+
 # ── Loadable checkpoints: clean name -> S3 path (used to RUN evals) ──────────────
-CHECKPOINTS = {
+# Every checkpoint lives at {S3_BUCKET}/checkpoints/<clean name>, so the dict is
+# generated from the clean names to keep the bucket single-sourced.
+_CHECKPOINT_NAMES = [
     # P=1 parameter-matched LoRA baselines
-    "Qwen2.5-0.5B_P1_R32": "s3://obviouslywrong-ndlora/checkpoints/Qwen2.5-0.5B_P1_R32",
-    "Qwen2.5-0.5B_P1_R64": "s3://obviouslywrong-ndlora/checkpoints/Qwen2.5-0.5B_P1_R64",
-    "Qwen2.5-0.5B_P1_R128": "s3://obviouslywrong-ndlora/checkpoints/Qwen2.5-0.5B_P1_R128",
+    "Qwen2.5-0.5B_P1_R32", "Qwen2.5-0.5B_P1_R64", "Qwen2.5-0.5B_P1_R128",
     # ParScale baselines (shared LoRA, no Barlow Twins)
-    "ParScale_P2_R32": "s3://obviouslywrong-ndlora/checkpoints/ParScale_P2_R32",
-    "ParScale_P4_R64": "s3://obviouslywrong-ndlora/checkpoints/ParScale_P4_R64",
-    "ParScale_P8_R128": "s3://obviouslywrong-ndlora/checkpoints/ParScale_P8_R128",
+    "ParScale_P2_R32", "ParScale_P4_R64", "ParScale_P8_R128",
     # ND-LoRA main results (Optuna OptC9)
-    "ND-LoRA_P2": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P2",
-    "ND-LoRA_P4": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4",
-    "ND-LoRA_P8": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P8",
+    "ND-LoRA_P2", "ND-LoRA_P4", "ND-LoRA_P8",
     # Table 4 architectural-ablation models
-    "ParScale-BT_P4": "s3://obviouslywrong-ndlora/checkpoints/ParScale-BT_P4",
-    "Stream_LoRA_P4": "s3://obviouslywrong-ndlora/checkpoints/Stream_LoRA_P4",
-    "Stream_LoRA-BT_P4": "s3://obviouslywrong-ndlora/checkpoints/Stream_LoRA-BT_P4",
+    "ParScale-BT_P4", "Stream_LoRA_P4", "Stream_LoRA-BT_P4",
     # Table 6 module-ablation + original-HP models
-    "ND-LoRA_P4_Original": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_Original",
-    "ND-LoRA_P4_no_MLP": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_no_MLP",
-    "ND-LoRA_P4_no_attention": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_no_attention",
-}
+    "ND-LoRA_P4_Original", "ND-LoRA_P4_no_MLP", "ND-LoRA_P4_no_attention",
+]
+CHECKPOINTS = {name: f"{S3_BUCKET}/checkpoints/{name}" for name in _CHECKPOINT_NAMES}
 ALL_CHECKPOINTS = CHECKPOINTS  # back-compat alias
 
 # ── Human-readable display names: clean name -> pretty label ─────────────────────

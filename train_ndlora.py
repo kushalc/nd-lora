@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-ParScale Local Replication Training Script
+ND-LoRA Training Script
 
-Main training script for ParScale experiments on Qwen2.5-0.5B with The Pile dataset.
-Supports both PEFT and full fine-tuning modes with comprehensive logging and analysis.
+Trains Neural Diversity LoRA (stream-specific LoRA + Barlow Twins regularization) on
+Qwen2.5-0.5B with The Pile dataset. Supports PEFT and full fine-tuning modes with
+comprehensive logging and analysis.
 """
 
 import argparse
@@ -37,18 +38,16 @@ from utils.git_utils import check_git_repo_clean
 from utils.logging_setup import (log_data_lineage, log_metrics, log_run_header,
                                  log_training_step, setup_python_logging)
 from utils.memory_utils import MemoryMonitor
+from utils.model_checkpoints import MODAL_APP, S3_BUCKET
 from utils.model_utils import (build_parscale_model,
                                count_trainable_parameters, setup_gpu_training)
 from utils.orthogonal_lora_loss import OrthogonalLoRALoss
-from utils.stream_diagnostics import StreamDiagnostics
 from utils.wandb_setup import (get_git_commit, log_stream_behavior_metrics,
                                log_training_metrics, log_validation_metrics,
                                monitor_system_resources, setup_wandb)
 
 logger = logging.getLogger(__name__)
 MODAL_GPU = "A100-80GB"
-# MODAL_GPU = "A10G"
-# MODAL_GPU = "L4"
 MODAL_IMAGE = modal.Image.debian_slim(python_version="3.11") \
                          .pip_install_from_requirements("requirements.txt") \
                          .run_commands("python -m spacy download en_core_web_sm") \
@@ -56,7 +55,7 @@ MODAL_IMAGE = modal.Image.debian_slim(python_version="3.11") \
                          .add_local_dir("utils", "/root/utils") \
                          .add_local_dir("configs", "/root/configs") \
                          .add_local_dir("ParScale", "/root/ParScale")
-app = modal.App("ParControl")
+app = modal.App(MODAL_APP)
 
 
 def parse_args(argv=None):
@@ -151,16 +150,16 @@ def parse_args(argv=None):
     parser.add_argument("--run-id", type=str, default=pd.Timestamp.now(tz="America/Los_Angeles").strftime("%Y-%m-%d-%H-%M-%S"),
                         help="Run ID of run for use in S3, W&B and local outputs")
     parser.add_argument("--no-sync-to-s3", dest="sync_to_s3", action="store_false", help="Sync to S3")
-    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-ndlora/checkpoints",
+    parser.add_argument("--s3-base-dir", type=str, default=f"{S3_BUCKET}/checkpoints",
                         help="Remote directory for checkpoints and logs, generally only used for Colab sessions")
     parser.add_argument("--config", type=str, default=None,
                         help="Path to YAML configuration file")
     parser.add_argument("--low-memory-mode", dest="high_memory_mode", action="store_false",
-                        help="Enable high-memory optimizations for 10x faster training")
+                        help="Disable high-memory optimizations (use low-memory data loading)")
     parser.add_argument("--memory-debug", action="store_true",
                         help="Enable detailed memory diagnostics and OOM prediction")
     parser.add_argument("--compile-model", action="store_true",
-                        help="Disable model compilation for speedup (auto-enabled with --high-memory-mode)")
+                        help="Enable model compilation for speedup (auto-enabled with high-memory mode)")
     parser.add_argument("--num-workers", type=int, default=None,
                         help="Number of data loading workers (auto-set based on memory mode)")
     parser.add_argument("--test", action="store_true",
@@ -228,10 +227,6 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
-    # For deterministic operations (may affect performance)
-    # torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.benchmark = False
 
 
 def setup_optimizer_scheduler(
@@ -516,10 +511,6 @@ def validation_step(
 @app.function(image=MODAL_IMAGE,
               gpu=MODAL_GPU,
               timeout=3600 * 24,
-              volumes={
-                  # "/data": modal.Volume.from_name("parcontrol-data", create_if_missing=True),
-                  # "/cache": modal.Volume.from_name("parcontrol-cache", create_if_missing=True),
-              },
               secrets=[
                   modal.Secret.from_name("wandb"),
                   modal.Secret.from_name("aws"),
@@ -608,22 +599,6 @@ def run_experiment(
     memory_monitor.log_memory("before_data_setup", -1)
     train_shard_ids, val_shard_ids = select_pile_shards(1)  # Note: Using single shard for training
 
-    # if config.get("high_memory_mode", False):
-    #     logger.info("Using high-performance data loading...")
-    #     train_dataloader, val_dataloader = create_high_performance_dataloader(
-    #         tokenizer=tokenizer,
-    #         max_seq_len=config["seq_len"],
-    #         batch_size=config["batch_size"],
-    #         num_workers=config.get("num_workers", 4),
-    #         seed=config["seed"],
-    #         prefetch_factor=config.get("prefetch_factor", 8),
-    #         target_batch_tokens=config.get("target_batch_tokens", 65536),
-    #         pack_sequences=True,
-    #         buffer_size=20000 if config.get("high_memory_mode", False) else 10000  # Conservative buffer for 15GB
-    #     )
-    # else:
-    # logger.info("Using standard data loading...")
-
     # Setup optimizer, scheduler & token tracker
     memory_monitor.log_memory("before_optimizer_setup", -1)
 
@@ -697,9 +672,6 @@ def run_experiment(
     tokenizer_info = get_tokenizer_info(tokenizer)
     log_data_lineage(logger, train_shard_ids, tokenizer_info, config["seed"])
 
-    # Setup stream diagnostics
-    stream_diagnostics = StreamDiagnostics(P)
-
     # Training loop
     logger.info("Starting training...")
     abs_start_time = start_time = time.time()
@@ -747,20 +719,7 @@ def run_experiment(
                 # Monitor system resources
                 system_stats = monitor_system_resources()
 
-                # Extract stream diagnostics (periodically to avoid overhead)
                 stream_stats = {}
-                # Note: Stream diagnostics disabled on MPS due to compatibility issues
-                # if step % (config["log_interval"] * 2) == 0:
-                #     try:
-                #         stream_weights = stream_diagnostics.extract_stream_weights(
-                #             model, batch["input_ids"], batch["attention_mask"]
-                #         )
-                #         stream_stats = stream_diagnostics.compute_stream_statistics(
-                #             stream_weights, batch["attention_mask"]
-                #         )
-                #         stream_diagnostics.record_statistics(step, stream_stats)
-                #     except Exception as e:
-                #         logger.warning("Stream diagnostics failed: %s", e, exc_info=True)
 
                 # Log memory summary to W&B
                 memory_summary = memory_monitor.get_memory_summary()
@@ -879,16 +838,12 @@ def run_experiment(
                          step=step, config=config, token_tracker=token_tracker,
                          P=P, logger=logger)
 
-    # Note: Stream diagnostics functionality has been moved to separate utilities
-
     # Calculate total time and throughput
     total_time = time.time() - start_time
     tokens_per_second = token_tracker.processed_tokens / total_time if total_time > 0 else 0
 
     # Final metrics
     final_metrics = {
-        # **final_val_metrics,
-        # **final_stream_stats,
         "total_steps": step,
         "total_tokens": token_tracker.processed_tokens,
         "total_time_seconds": total_time,
@@ -923,8 +878,6 @@ def run_experiment(
         if config_file.exists():
             upload_to_s3(str(config_file), config["s3_base_dir"], config["output_dir"], logger)
 
-    # logger.info("Experiment completed successfully! Results [loss=%.4f, perplexity=%.1e, ...] saved to: %s",
-    #             final_metrics['loss'], final_metrics['perplexity'], results_path)
     return final_metrics
 
 

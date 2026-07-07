@@ -31,6 +31,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from utils.model_checkpoints import S3_BUCKET
+
 
 def parse_duration(duration_str: str) -> float:
     """Parse duration string like '1h', '30m', '2d' into seconds."""
@@ -175,7 +177,7 @@ if __name__ == '__main__':
     # N16n 11/28 -> spectral diversity, N128n 11/28 -> Frobenius norm
     parser.add_argument('--eval-dir', type=Path, default='outputs/neurodiversity/evals-N1024n',
                         help='Directory containing evaluation .pkl files')
-    parser.add_argument("--s3-base-path", type=str, nargs="+", default=["s3://obviouslywrong-ndlora/evals/neurodiversity/evals-N1024n"],
+    parser.add_argument("--s3-base-path", type=str, nargs="+", default=[f"{S3_BUCKET}/evals/neurodiversity/evals-N1024n"],
                         help="S3 path for syncing model results")
     parser.add_argument("--since", type=str, default=None,
                         help="Only include files modified within this duration (e.g. '1h', '30m', '2d')")

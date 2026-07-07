@@ -9,7 +9,7 @@ import random
 import time
 
 from leaderboard.backend_cli import app, evaluate_all_models, parse_args
-from utils.model_checkpoints import BASE_CHECKPOINTS, ALL_CHECKPOINTS as MODEL_CHECKPOINTS
+from utils.model_checkpoints import BASE_CHECKPOINTS, ALL_CHECKPOINTS as MODEL_CHECKPOINTS, S3_BUCKET
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(funcName)s %(message)s', level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -20,7 +20,7 @@ def modal__test():
     kwargs = vars(parse_args([
         "--sample-limit=5",
         "Qwen/Qwen2.5-0.5B",
-        "s3://obviouslywrong-ndlora/checkpoints/2025-09-14-15-20-01",
+        f"{S3_BUCKET}/checkpoints/2025-09-14-15-20-01",
     ]))
     evaluate_all_models.remote(**kwargs)
 
@@ -28,8 +28,6 @@ def modal__test():
 @app.local_entrypoint()
 def modal__Qwen():
     kwargs = vars(parse_args([
-        # "--batch-size=4",  # Note: Default 32 breaks SQuaDv2 and a few others for Qwen, override for 2nd run
-        # "--s3-base-dir=s3://obviouslywrong/ParControl/evals/2025-09-15-09-09-04",
         "Qwen/Qwen2.5-0.5B",
         "Qwen/Qwen2.5-1.5B",
     ]))
@@ -60,12 +58,9 @@ FULL_HALLUC_EVAL_SUITE = [
 @app.local_entrypoint()
 def modal__fParControl():
     # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    # checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()) + BASE_CHECKPOINTS,
-    #                             len(MODEL_CHECKPOINTS) + len(BASE_CHECKPOINTS))
-    # Note: Using only ParControl models for evaluation
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args(["--eval-benchmark-tasks"] + FULL_HALLUC_EVAL_SUITE + GENERAL_HALLUC_EVAL_SUITE +
-                             ["--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-full"] +
+                             [f"--s3-base-dir={S3_BUCKET}/evals/evals-full"] +
                              checkpoints))
     evaluate_all_models.remote(**kwargs)
 
@@ -76,7 +71,7 @@ def modal__gParControl():
     # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args(["--eval-benchmark-tasks"] + GENERAL_HALLUC_EVAL_SUITE +
-                             ["--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-general"] +
+                             [f"--s3-base-dir={S3_BUCKET}/evals/evals-general"] +
                              checkpoints))
     evaluate_all_models.remote(**kwargs)
 
@@ -84,14 +79,10 @@ def modal__gParControl():
 @app.local_entrypoint()
 def modal__dParControl():
     # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    # checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()) + BASE_CHECKPOINTS,
-    #                             len(MODEL_CHECKPOINTS) + len(BASE_CHECKPOINTS))
-    # Note: Using only ParControl models for evaluation
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args([
         "--sample-limit=1024",
-        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-deep",
-
+        f"--s3-base-dir={S3_BUCKET}/evals/evals-deep",
     ] + checkpoints))
     evaluate_all_models.remote(**kwargs)
 
@@ -99,16 +90,13 @@ def modal__dParControl():
 @app.local_entrypoint()
 def modal__dParControl_spawns():
     # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    # checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()) + BASE_CHECKPOINTS,
-    #                             len(MODEL_CHECKPOINTS) + len(BASE_CHECKPOINTS))
-    # Note: Using only ParControl models for evaluation
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
 
     PARALLEL_WORKER_COUNT = 3
 
     kwargs = vars(parse_args([
         "--sample-limit=1024",
-        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-deep",
+        f"--s3-base-dir={S3_BUCKET}/evals/evals-deep",
     ] + checkpoints))
 
     for worker in range(PARALLEL_WORKER_COUNT):
@@ -117,19 +105,16 @@ def modal__dParControl_spawns():
             evaluate_all_models.spawn(**kwargs)
             time.sleep(10)
         except Exception as e:
-            logging.error(f"Failed to spawn worker: {worker} on checkpoints {checkpoints}", e)
+            logging.error("Failed to spawn worker %s on checkpoints %s", worker, checkpoints, exc_info=e)
             continue
 
 
 @app.local_entrypoint()
 def modal__qParControl():
     # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    # checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()) + BASE_CHECKPOINTS,
-    #                             len(MODEL_CHECKPOINTS) + len(BASE_CHECKPOINTS))
-    # Note: Using only ParControl models for evaluation
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args([
         "--sample-limit=128",
-        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-quick",
+        f"--s3-base-dir={S3_BUCKET}/evals/evals-quick",
     ] + checkpoints))
     evaluate_all_models.remote(**kwargs)

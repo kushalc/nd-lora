@@ -43,7 +43,6 @@ class TextCorruptor:
 
         # Corruption method mapping
         self.corruption_methods = {
-            # "temporal": self._corrupt_temporal,
             "numerical": self._corrupt_numerical,
             "negation": self._corrupt_negation,
             "entity": self._corrupt_entity_swap
@@ -76,18 +75,16 @@ class TextCorruptor:
                                    split="train", streaming=True,
                                    data_files=["train/00.jsonl.zst"])  # Just first shard
 
-            max_docs = 1500  # Process 5K docs to build vocabulary
+            max_docs = 1500  # Process 1500 docs to build vocabulary
             for processed_docs, example in enumerate(dataset):
                 if processed_docs >= max_docs:
                     break
 
                 doc = self.nlp(example["text"])
-                # self._extract_temporal_vocabulary(doc, text)
                 self._extract_numerical_vocabulary(doc)
                 self._extract_entity_vocabulary(doc)
                 self._extract_negation_vocabulary(doc)
 
-                processed_docs += 1
                 if processed_docs % 500 == 0:
                     logger.info("Processed %d documents...", processed_docs)
 
@@ -95,29 +92,6 @@ class TextCorruptor:
 
         except Exception as e:
             logger.warning("Failed to build vocabulary from dataset: %s", e, exc_info=True)
-
-    def _extract_temporal_vocabulary(self, doc, text: str):
-        """Extract temporal words and phrases from document."""
-        # Extract temporal expressions
-        temporal_words = set()
-
-        for token in doc:
-            if token.lower_ in ["before", "after", "since", "until", "during", "then",
-                                "next", "previous", "later", "earlier", "followed", "preceded"]:
-                temporal_words.add(token.lower_)
-
-        # Build temporal pairs dynamically
-        temporal_opposites = {
-            "before": "after", "after": "before",
-            "since": "until", "until": "since",
-            "earlier": "later", "later": "earlier",
-            "previous": "next", "next": "previous",
-            "followed": "preceded", "preceded": "followed"
-        }
-
-        for word in temporal_words:
-            if word in temporal_opposites:
-                self.temporal_pairs[word] = temporal_opposites[word]
 
     def _extract_numerical_vocabulary(self, doc):
         """Extract numbers from document."""
@@ -191,10 +165,6 @@ class TextCorruptor:
         # Determine available corruption methods
         available_methods = []
 
-        # Check for temporal patterns
-        # if self.temporal_matcher(doc):
-        #     available_methods.append("temporal")
-
         # Check for numbers
         if any(token.like_num for token in doc):
             available_methods.append("numerical")
@@ -229,34 +199,6 @@ class TextCorruptor:
                 logger.warning("Failed to apply %s corruption: %s", method, e, exc_info=True)
 
         return corrupted_text, applied_corruptions
-
-    def _corrupt_temporal(self, text: str) -> Tuple[str, bool]:
-        """Apply temporal inversion corruption using dynamic vocabulary."""
-        corrupted = text
-        success = False
-
-        # Use dynamic temporal pairs from vocabulary
-        if self.temporal_pairs:
-            available_swaps = [(orig, repl) for orig, repl in self.temporal_pairs.items()
-                               if orig in text.lower()]
-
-            if available_swaps:
-                original, replacement = self.rng.choice(available_swaps)
-                # Case-preserving replacement
-                pattern = re.compile(re.escape(original), re.IGNORECASE)
-                corrupted = pattern.sub(replacement, corrupted, count=1)
-                success = True
-
-        # Handle year ranges (e.g., "1914-1918" -> "1918-1914")
-        if not success:
-            year_pattern = r'\b(\d{4})-(\d{4})\b'
-            match = re.search(year_pattern, text)
-            if match:
-                year1, year2 = match.groups()
-                corrupted = re.sub(year_pattern, "%s-%s" % (year2, year1), text, count=1)
-                success = True
-
-        return corrupted, success
 
     def _corrupt_numerical(self, text: str) -> Tuple[str, bool]:
         """Apply numerical replacement corruption using dynamic vocabulary."""

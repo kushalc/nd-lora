@@ -181,9 +181,11 @@ def analyze_table2(parquet_path=None,
     assert baseline_key in df.index, f"Baseline {baseline_key} not found in dataframe"
     baseline_row = df.loc[baseline_key]
 
-    # Filter to only OptC9 treatments using vectorized string operations
+    # Filter to OptC9 treatments plus all P=1 Repro-LoRA ranks: the per-P "best score" for
+    # knowledge tasks (P*=1) is the best single-stream baseline across ranks (e.g. R128), while
+    # the Delta% is still measured against the R32 baseline row below.
     lora_level = df_q05.index.get_level_values(2)
-    df_optc9 = df_q05.loc[lora_level.str.contains("|".join(["OptC9", baseline_key[2]]), na=False)].copy()
+    df_optc9 = df_q05.loc[lora_level.str.contains("|".join(["OptC9", "Repro LoRA"]), na=False)].copy()
 
     # Group by P and take max across OptC9 variants for best scores
     p_level = df_optc9.index.get_level_values(1)
@@ -260,7 +262,7 @@ def analyze_table2(parquet_path=None,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate Table 1 and Table 2 analyses with optional significance tests')
     parser.add_argument('--no-compute-stats', action='store_false', dest="compute_stats",
-                        help='Compute statistical significance tests for Table 2 (requires S3 eval data)')
+                        help='Skip the statistical significance tests for Table 2 (which require S3 eval data)')
     parser.add_argument('--test-method', choices=['bootstrap', 'mcnemar', 'both', 'auto'], default='auto',
                         help='Statistical test method (default: auto - McNemar for binary tasks, bootstrap for others)')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for bootstrap (default: 42)')

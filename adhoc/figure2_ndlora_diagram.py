@@ -14,8 +14,6 @@ from matplotlib.patches import ConnectionPatch, FancyBboxPatch
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 
-# Component tracking class
-
 TEXT_KWARGS = dict(
     ha='center',
     va='center',
@@ -55,7 +53,7 @@ class Component:
 
 
 # Set up the figure (wider for left-to-right flow)
-fig, ax = plt.subplots(1, 1, figsize=(11.2, 5))  # Reduced height to 5.5 (removed title space)
+fig, ax = plt.subplots(1, 1, figsize=(11.2, 5))  # wide aspect for left-to-right flow
 ax.set_xlim(0, 11.2)
 ax.set_ylim(0, 5.5)
 ax.axis('off')
@@ -118,8 +116,6 @@ for i, y in enumerate(stream_y_positions):
                                 linewidth=2,
                                 zorder=2)
     ax.add_patch(stream_box)
-    # ax.text(stream_x + 0.67, y, f'Stream #{i+1}', ha='center', va='center', color=stream_text_colors[i],
-    #         fontsize=10, fontweight='bold', zorder=15)
 
     # LoRA adapter (right side of stream)
     lora_x, lora_y, lora_w, lora_h = stream_x + stream_w - 1.1, y - 0.25, 1, 0.5
@@ -173,8 +169,6 @@ agg_box = FancyBboxPatch((agg_x, agg_y), agg_w, agg_h, zorder=5,
                          linewidth=2)
 ax.add_patch(agg_box)
 ax.text(agg_x + agg_w/2, y_center, 'Multi-Stream\nAggregator', zorder=10, **TEXT_KWARGS)
-# ax.text(agg_x + agg_w/2, y_center - 0.1, r'$\alpha_i \sim Softmax(MLP)$',
-#         ha='center', va='center', zorder=10, fontsize=10, fontweight='bold')
 
 # LM Head (AFTER aggregator, vertically centered)
 lm_head_x, lm_head_w, lm_head_h = agg_x + agg_w + 0.5, 0.75, 0.8  # Reduced width by 20% from 1.3 to 1.04

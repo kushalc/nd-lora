@@ -9,33 +9,33 @@ All models based on Qwen2.5-0.5B, trained on 20M tokens from The Pile.
 # Core paper checkpoints (Tables 1, 7, 8, 9)
 CORE_CHECKPOINTS = {
     # P=1 baselines (parameter-matched)
-    "Qwen2.5-0.5B_P1_R32": "s3://obviouslywrong-parcontrol/nd-lora/Qwen2.5-0.5B_P1_R32",
-    "Qwen2.5-0.5B_P1_R64": "s3://obviouslywrong-parcontrol/nd-lora/Qwen2.5-0.5B_P1_R64",
-    "Qwen2.5-0.5B_P1_R128": "s3://obviouslywrong-parcontrol/nd-lora/Qwen2.5-0.5B_P1_R128",
+    "Qwen2.5-0.5B_P1_R32": "s3://obviouslywrong-ndlora/checkpoints/Qwen2.5-0.5B_P1_R32",
+    "Qwen2.5-0.5B_P1_R64": "s3://obviouslywrong-ndlora/checkpoints/Qwen2.5-0.5B_P1_R64",
+    "Qwen2.5-0.5B_P1_R128": "s3://obviouslywrong-ndlora/checkpoints/Qwen2.5-0.5B_P1_R128",
 
     # ParScale baselines (no LoRA, no Barlow Twins)
-    "ParScale_P2_R32": "s3://obviouslywrong-parcontrol/nd-lora/ParScale_P2_R32",
-    "ParScale_P4_R64": "s3://obviouslywrong-parcontrol/nd-lora/ParScale_P4_R64",
-    "ParScale_P8_R128": "s3://obviouslywrong-parcontrol/nd-lora/ParScale_P8_R128",
+    "ParScale_P2_R32": "s3://obviouslywrong-ndlora/checkpoints/ParScale_P2_R32",
+    "ParScale_P4_R64": "s3://obviouslywrong-ndlora/checkpoints/ParScale_P4_R64",
+    "ParScale_P8_R128": "s3://obviouslywrong-ndlora/checkpoints/ParScale_P8_R128",
 
     # ND-LoRA main results (optimized with Optuna)
-    "ND-LoRA_P2": "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P2",
-    "ND-LoRA_P4": "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4",
-    "ND-LoRA_P8": "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P8",
+    "ND-LoRA_P2": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P2",
+    "ND-LoRA_P4": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4",
+    "ND-LoRA_P8": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P8",
 }
 
 # Ablation checkpoints (Table 4)
 ABLATION_CHECKPOINTS = {
-    "ParScale-BT_P4": "s3://obviouslywrong-parcontrol/nd-lora/ParScale-BT_P4",
-    "Stream_LoRA_P4": "s3://obviouslywrong-parcontrol/nd-lora/Stream_LoRA_P4",
-    "Stream_LoRA-BT_P4": "s3://obviouslywrong-parcontrol/nd-lora/Stream_LoRA-BT_P4",
-    "ND-LoRA_P4_Original": "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4_Original",
+    "ParScale-BT_P4": "s3://obviouslywrong-ndlora/checkpoints/ParScale-BT_P4",
+    "Stream_LoRA_P4": "s3://obviouslywrong-ndlora/checkpoints/Stream_LoRA_P4",
+    "Stream_LoRA-BT_P4": "s3://obviouslywrong-ndlora/checkpoints/Stream_LoRA-BT_P4",
+    "ND-LoRA_P4_Original": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_Original",
 }
 
 # Module ablations (Table 6)
 MODULE_ABLATION_CHECKPOINTS = {
-    "ND-LoRA_P4_no_MLP": "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4_no_MLP",
-    "ND-LoRA_P4_no_attention": "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4_no_attention",
+    "ND-LoRA_P4_no_MLP": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_no_MLP",
+    "ND-LoRA_P4_no_attention": "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_no_attention",
 }
 
 # Combined dictionary of all paper-essential checkpoints

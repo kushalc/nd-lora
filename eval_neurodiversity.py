@@ -619,11 +619,11 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="PyTorch hook-based activation recording during evaluation")
     parser.add_argument("--model-names", nargs="+", help="Model name or S3 path",
                         default=[
-                            "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4",
-                            "s3://obviouslywrong-parcontrol/nd-lora/ND-LoRA_P4_Original",
-                            "s3://obviouslywrong-parcontrol/nd-lora/ParScale-BT_P4",
-                            "s3://obviouslywrong-parcontrol/nd-lora/Stream_LoRA_P4",
-                            "s3://obviouslywrong-parcontrol/nd-lora/ParScale_P4_R64",
+                            "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4",
+                            "s3://obviouslywrong-ndlora/checkpoints/ND-LoRA_P4_Original",
+                            "s3://obviouslywrong-ndlora/checkpoints/ParScale-BT_P4",
+                            "s3://obviouslywrong-ndlora/checkpoints/Stream_LoRA_P4",
+                            "s3://obviouslywrong-ndlora/checkpoints/ParScale_P4_R64",
                         ])
     parser.add_argument("--target-layer", type=str, default="model.model.norm",
                         help="Target layer for monitoring and optional corruption")
@@ -642,7 +642,7 @@ def parse_args(argv=None):
     parser.add_argument("--resamplings", type=int, default=16,
                         help="Number of bootstrap resamplings to take")
     parser.add_argument("--limit", type=int, default=128, help="Sample limit per task")
-    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-parcontrol/nd-lora/neurodiversity",
+    parser.add_argument("--s3-base-dir", type=str, default="s3://obviouslywrong-ndlora/evals/neurodiversity",
                         help="S3 base directory for uploading results")
     parser.add_argument("--force", action="store_true",
                         help="Force re-evaluation even if results exist")

@@ -422,7 +422,7 @@ def main():
                             "Qwen/Qwen2.5-0.5B",
                             "Qwen/Qwen2.5-1.5B",
                         ])
-    parser.add_argument("--s3-base-path", type=str, default="s3://obviouslywrong-parcontrol/nd-lora",
+    parser.add_argument("--s3-base-path", type=str, default="s3://obviouslywrong-ndlora/evals",
                         help="S3 path for syncing ParControl model results")
 
     parser.add_argument("--plot-mode", nargs="+", choices=['all', "pub", 'summ', 'qa', 'instr', 'detect', 'rc'],
@@ -436,7 +436,7 @@ def main():
                         datefmt='%Y-%m-%d %H:%M:%S')
 
     args.results_path = args.results_base_path / f"evals-{args.analysis_mode}"
-    args.s3_path = args.s3_base_path.rstrip("/") + f"/evals-{args.analysis_mode}"
+    args.s3_path = args.s3_base_path.rstrip("/") + f"/{args.analysis_mode}"
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Load and verify

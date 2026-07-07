@@ -141,8 +141,8 @@ def parse_args(argv=None):
     parser.add_argument("--no-sync-to-s3", dest="sync_to_s3", action="store_false", help="Sync to S3")
     parser.add_argument("--s3-base-dir", type=str, default=f"{S3_BUCKET}/checkpoints",
                         help="Remote directory for checkpoints and logs, generally only used for Colab sessions")
-    parser.add_argument("--config", type=str, default=None,
-                        help="Path to YAML configuration file")
+    parser.add_argument("config", type=str,
+                        help="Path to the YAML experiment config in configs/")
     parser.add_argument("--memory-debug", action="store_true",
                         help="Enable detailed memory diagnostics and OOM prediction")
     parser.add_argument("--num-workers", type=int, default=None,
@@ -158,14 +158,13 @@ def parse_args(argv=None):
     args.output_dir = "./outputs/%s" % args.run_id
     args.s3_base_dir = args.s3_base_dir.rstrip("/")
 
-    # Load config file if provided. YAML values (native types) override argparse
-    # defaults; every key must name a known argument.
-    if args.config:
-        with open(args.config, 'r') as f:
-            config_dict = yaml.safe_load(f) or {}
-        for key, value in config_dict.items():
-            assert hasattr(args, key), f"Unknown config key '{key}' in {args.config}"
-            setattr(args, key, value)
+    # Load the YAML config. Its (native-typed) values override argparse defaults;
+    # every key must name a known argument.
+    with open(args.config, 'r') as f:
+        config_dict = yaml.safe_load(f) or {}
+    for key, value in config_dict.items():
+        assert hasattr(args, key), f"Unknown config key '{key}' in {args.config}"
+        setattr(args, key, value)
 
     # Data-loading defaults (high-throughput settings used for all paper runs)
     if args.num_workers is None:
@@ -790,4 +789,4 @@ def modal__train(config: str):
     Example:
         modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
     """
-    main(["--config", config])
+    main([config])

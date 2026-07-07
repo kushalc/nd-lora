@@ -205,6 +205,12 @@ def generate_relative_plots(df, output_dir, plot_type='all', analysis_mode="quic
             continue
         diff_results[key] = group - df.loc[baseline_col].values
 
+    if not diff_results:
+        # No in-suite single-stream P=1 baseline (e.g. the deep suite carries only the
+        # LoRA-ablation run-ids, not the Repro LoRA baselines) -> relative plots are not
+        # computable. The absolute-score parquet is already written; skip relative artifacts.
+        logging.warning("No baseline columns found for %s mode; skipping relative plots", baseline_mode)
+        return pd.DataFrame()
     diff_df = pd.concat(diff_results.values())
 
     # Apply same model ordering to relative plots
@@ -447,6 +453,9 @@ def main():
         df_with_metadata = generate_absolute_plots(filtered_df, args.output_dir, plot_type, args.analysis_mode)
         diff_df = generate_relative_plots(df_with_metadata, args.output_dir, plot_type, args.analysis_mode,
                                           baseline_mode=args.baseline_mode)
+        if diff_df.empty:
+            logging.warning("No relative data for plot_type=%s mode=%s; skipping eval summaries", plot_type, args.analysis_mode)
+            continue
         generate_model_eval_summaries(diff_df, df_with_metadata, args.output_dir, plot_type, args.analysis_mode,
                                       baseline_mode=args.baseline_mode)
 

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-Evaluate ParControl experiments using Modal for distributed execution.
-Reuses backend_cli.py functions for maximum code sharing.
+Evaluate ND-LoRA checkpoints on Modal, reusing backend_cli functions for code sharing.
+
+Run as: uv run scripts/eval_experiments.py <mode> [--workers N]
 """
 
+import argparse
 import logging
 import random
-import time
+
+import modal
 
 from leaderboard.backend_cli import app, evaluate_all_models, parse_args
 from utils.model_checkpoints import ALL_CHECKPOINTS as MODEL_CHECKPOINTS, S3_BUCKET
@@ -14,22 +17,10 @@ from utils.model_checkpoints import ALL_CHECKPOINTS as MODEL_CHECKPOINTS, S3_BUC
 logging.basicConfig(format='%(asctime)s %(levelname)s %(funcName)s %(message)s', level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 
-
-@app.local_entrypoint()
-def modal__test():
-    kwargs = vars(parse_args([
-        "--sample-limit=5",
-        "Qwen/Qwen2.5-0.5B",
-        f"{S3_BUCKET}/checkpoints/2025-09-14-15-20-01",
-    ]))
-    evaluate_all_models.remote(**kwargs)
-
-
 GENERAL_HALLUC_EVAL_SUITE = [
     "wikitext",
     "pile",
     "winogrande",
-    # "race_4",  # Note: Task not currently supported
 ]
 
 FULL_HALLUC_EVAL_SUITE = [
@@ -45,67 +36,41 @@ FULL_HALLUC_EVAL_SUITE = [
     "truthfulqa_mc2",
 ] + GENERAL_HALLUC_EVAL_SUITE
 
+# Evaluation suite / sample-budget presets -> backend_cli args.
+EVAL_MODES = {
+    "full":    {"tasks": FULL_HALLUC_EVAL_SUITE, "s3": "evals-full"},
+    "general": {"tasks": GENERAL_HALLUC_EVAL_SUITE, "s3": "evals-general"},
+    "deep":    {"sample_limit": 1024, "s3": "evals-deep"},
+    "quick":   {"sample_limit": 128, "s3": "evals-quick"},
+}
 
-@app.local_entrypoint()
-def modal__fParControl():
-    # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Evaluate ND-LoRA checkpoints on Modal")
+    parser.add_argument("mode", choices=list(EVAL_MODES), help="Evaluation suite / sample budget")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="Number of parallel eval workers to spawn over the checkpoint set")
+    args = parser.parse_args(argv)
+
+    spec = EVAL_MODES[args.mode]
+    # Randomly permute so multiple workers cover the checkpoint set in parallel.
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
-    kwargs = vars(parse_args(["--eval-benchmark-tasks"] + FULL_HALLUC_EVAL_SUITE + GENERAL_HALLUC_EVAL_SUITE +
-                             [f"--s3-base-dir={S3_BUCKET}/evals/evals-full"] +
-                             checkpoints))
-    evaluate_all_models.remote(**kwargs)
+    cli = []
+    if "tasks" in spec:
+        cli += ["--eval-benchmark-tasks"] + spec["tasks"]
+    if "sample_limit" in spec:
+        cli += [f"--sample-limit={spec['sample_limit']}"]
+    cli += [f"--s3-base-dir={S3_BUCKET}/evals/{spec['s3']}"]
+    kwargs = vars(parse_args(cli + checkpoints))
+
+    with modal.enable_output(), app.run(detach=True):
+        if args.workers == 1:
+            evaluate_all_models.remote(**kwargs)
+        else:
+            for worker in range(args.workers):
+                logging.info("Spawning eval worker %d", worker)
+                evaluate_all_models.spawn(**kwargs)
 
 
-@app.local_entrypoint()
-def modal__gParControl():
-    """Evaluate ParControl models on general purpose evaluation suite only (wikitext, pile, winogrande)."""
-    # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
-    kwargs = vars(parse_args(["--eval-benchmark-tasks"] + GENERAL_HALLUC_EVAL_SUITE +
-                             [f"--s3-base-dir={S3_BUCKET}/evals/evals-general"] +
-                             checkpoints))
-    evaluate_all_models.remote(**kwargs)
-
-
-@app.local_entrypoint()
-def modal__dParControl():
-    # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
-    kwargs = vars(parse_args([
-        "--sample-limit=1024",
-        f"--s3-base-dir={S3_BUCKET}/evals/evals-deep",
-    ] + checkpoints))
-    evaluate_all_models.remote(**kwargs)
-
-
-@app.local_entrypoint()
-def modal__dParControl_spawns():
-    # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
-
-    PARALLEL_WORKER_COUNT = 3
-
-    kwargs = vars(parse_args([
-        "--sample-limit=1024",
-        f"--s3-base-dir={S3_BUCKET}/evals/evals-deep",
-    ] + checkpoints))
-
-    for worker in range(PARALLEL_WORKER_COUNT):
-        try:
-            logging.info(f"Firing worker {worker} to handle checkpoints: {checkpoints}")
-            evaluate_all_models.spawn(**kwargs)
-            time.sleep(10)
-        except Exception as e:
-            logging.error("Failed to spawn worker %s on checkpoints %s", worker, checkpoints, exc_info=e)
-            continue
-
-
-@app.local_entrypoint()
-def modal__qParControl():
-    # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
-    checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
-    kwargs = vars(parse_args([
-        "--sample-limit=128",
-        f"--s3-base-dir={S3_BUCKET}/evals/evals-quick",
-    ] + checkpoints))
-    evaluate_all_models.remote(**kwargs)
+if __name__ == "__main__":
+    main()

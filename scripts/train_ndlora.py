@@ -765,14 +765,11 @@ def run_experiment(
 def main(argv=None):
     args = parse_args(argv)
     check_git_repo_clean()
-    modal_run_experiment.remote(args.P, vars(args))
+    # Launch the training job on Modal detached (survives client disconnect) with
+    # streamed logs. Run as: uv run scripts/train_ndlora.py configs/ND-LoRA_P4.yaml
+    with modal.enable_output(), app.run(detach=True):
+        modal_run_experiment.remote(args.P, vars(args))
 
 
-@app.local_entrypoint()
-def modal__train(config: str):
-    """Train a single ND-LoRA experiment from a YAML config in configs/.
-
-    Example:
-        modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
-    """
-    main([config])
+if __name__ == "__main__":
+    main()

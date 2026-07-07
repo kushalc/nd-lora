@@ -45,23 +45,19 @@ uv sync
 ### Training
 
 ```bash
-# Train an ND-LoRA model locally from its YAML config (config path is a positional arg)
+# Train an ND-LoRA experiment from its YAML config (config path is a positional arg).
+# This launches the job on Modal, detached (survives disconnect) with streamed logs.
 uv run scripts/train_ndlora.py configs/ND-LoRA_P4.yaml
-
-# Or use Modal for distributed training (each experiment is a YAML in configs/)
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
 ```
 
 ### Evaluation
 
 ```bash
-# Run hallucination benchmarks
-cd leaderboard
-python backend_cli.py --model YOUR_MODEL_PATH
+# Evaluate the paper checkpoints on Modal (mode = full | general | deep | quick)
+uv run scripts/eval_experiments.py deep
 
-# Or use evaluation scripts
-uv run scripts/eval_experiments.py --checkpoint PATH_TO_CHECKPOINT
-python eval_neurodiversity.py --checkpoint PATH_TO_CHECKPOINT
+# Neurodiversity causality experiments (corruption analysis) on Modal
+uv run scripts/eval_neurodiversity.py --use-modal --meta-mode dose --corruption-mode stream
 ```
 
 ## Model Downloads
@@ -91,9 +87,9 @@ from utils.model_checkpoints import (
 checkpoint_path = CHECKPOINTS["ND-LoRA_P4"]   # S3 path for ND-LoRA P=4 model
 model_name = DISPLAY_NAMES["ND-LoRA_P4"]      # "ND-LoRA (P=4, OptC9)"
 
-# Use with evaluation scripts
+# Use with evaluation / analysis scripts
 uv run scripts/analyze_experiments.py --model-whitelist nd-lora/
-uv run scripts/eval_experiments.py --checkpoint CHECKPOINT_PATH
+uv run scripts/eval_experiments.py deep
 ```
 
 ### Reading Evaluation Results
@@ -123,58 +119,59 @@ The script automatically:
 
 ## Reproducing Paper Results
 
-All experiments in the paper can be reproduced using Modal for distributed execution.
-Each experiment is a YAML in [`configs/`](configs/) (named for its checkpoint), run via a
-single entrypoint:
+All experiments in the paper can be reproduced on Modal. Each experiment is a YAML in
+[`configs/`](configs/) (named for its checkpoint); the training script takes the config
+path positionally and launches the job on Modal (detached, with streamed logs):
 
 ```bash
-modal run scripts/train_ndlora.py::modal__train --config configs/<experiment>.yaml
+uv run scripts/train_ndlora.py configs/<experiment>.yaml
 ```
 
 ### Core Results (Tables 1, 7, 8, 9)
 
 ```bash
 # P=1 baselines (parameter-matched)
-modal run scripts/train_ndlora.py::modal__train --config configs/Qwen2.5-0.5B_P1_R32.yaml
-modal run scripts/train_ndlora.py::modal__train --config configs/Qwen2.5-0.5B_P1_R64.yaml
-modal run scripts/train_ndlora.py::modal__train --config configs/Qwen2.5-0.5B_P1_R128.yaml
+uv run scripts/train_ndlora.py configs/Qwen2.5-0.5B_P1_R32.yaml
+uv run scripts/train_ndlora.py configs/Qwen2.5-0.5B_P1_R64.yaml
+uv run scripts/train_ndlora.py configs/Qwen2.5-0.5B_P1_R128.yaml
 
 # ParScale baselines
-modal run scripts/train_ndlora.py::modal__train --config configs/ParScale_P2_R32.yaml
-modal run scripts/train_ndlora.py::modal__train --config configs/ParScale_P4_R64.yaml
-modal run scripts/train_ndlora.py::modal__train --config configs/ParScale_P8_R128.yaml
+uv run scripts/train_ndlora.py configs/ParScale_P2_R32.yaml
+uv run scripts/train_ndlora.py configs/ParScale_P4_R64.yaml
+uv run scripts/train_ndlora.py configs/ParScale_P8_R128.yaml
 
 # ND-LoRA main results (Optuna-optimized)
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P2.yaml
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P8.yaml
+uv run scripts/train_ndlora.py configs/ND-LoRA_P2.yaml
+uv run scripts/train_ndlora.py configs/ND-LoRA_P4.yaml
+uv run scripts/train_ndlora.py configs/ND-LoRA_P8.yaml
 ```
 
 ### Ablation Studies (Tables 4, 6)
 
 ```bash
 # Component ablations
-modal run scripts/train_ndlora.py::modal__train --config configs/ParScale-BT_P4.yaml       # ParScale-BT
-modal run scripts/train_ndlora.py::modal__train --config configs/Stream_LoRA_P4.yaml        # Stream-LoRA
-modal run scripts/train_ndlora.py::modal__train --config configs/Stream_LoRA-BT_P4.yaml     # Stream-LoRA-BT
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P4_Original.yaml   # ND-LoRA (original HP)
+uv run scripts/train_ndlora.py configs/ParScale-BT_P4.yaml       # ParScale-BT
+uv run scripts/train_ndlora.py configs/Stream_LoRA_P4.yaml        # Stream-LoRA
+uv run scripts/train_ndlora.py configs/Stream_LoRA-BT_P4.yaml     # Stream-LoRA-BT
+uv run scripts/train_ndlora.py configs/ND-LoRA_P4_Original.yaml   # ND-LoRA (original HP)
 
 # Module ablations
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P4_no_attention.yaml
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P4_no_MLP.yaml
+uv run scripts/train_ndlora.py configs/ND-LoRA_P4_no_attention.yaml
+uv run scripts/train_ndlora.py configs/ND-LoRA_P4_no_MLP.yaml
 ```
 
 ### Evaluation
 
 ```bash
-# Deep evaluation (N=1024 samples per task) via Modal
-modal run scripts/eval_experiments.py::modal__dParControl
+# Deep evaluation (N=1024 samples per task) on Modal
+uv run scripts/eval_experiments.py deep
 
-# Corruption experiments for causality analysis
+# Corruption experiments for causality analysis (on Modal)
 uv run scripts/eval_neurodiversity.py \
-  --checkpoint CHECKPOINT_PATH \
-  --corruption-methods substitute_tokens substitute_streams \
-  --n-samples 128
+  --use-modal \
+  --meta-mode dose \
+  --corruption-mode stream \
+  --limit 128
 ```
 
 ## Architecture
@@ -223,7 +220,7 @@ nd-lora/
 
 ## Modal Integration
 
-This project uses [Modal](https://modal.com) for running experiments and evaluations. Modal entrypoints in `scripts/train_ndlora.py` allow distributed training across cloud GPUs.
+This project uses [Modal](https://modal.com) for distributed execution across cloud GPUs. Every script launches its Modal job programmatically (via `app.run(detach=True)` with streamed logs), so you invoke them all the same way — directly with `uv run` — rather than through `modal run` entrypoints.
 
 ### Setting up Modal
 
@@ -232,7 +229,7 @@ This project uses [Modal](https://modal.com) for running experiments and evaluat
 modal token new
 
 # Run experiment
-modal run scripts/train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
+uv run scripts/train_ndlora.py configs/ND-LoRA_P4.yaml
 ```
 
 ## Citation

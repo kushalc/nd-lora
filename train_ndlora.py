@@ -29,8 +29,6 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from utils.checkpoint_utils import (load_last_checkpoint, save_last_checkpoint,
                                     sync_logs_to_s3, upload_to_s3)
-from utils.contrastive_loss import (ContrastiveLoss, compute_stream_variance,
-                                    extract_parscale_stream_logits)
 from utils.data_utils import (TokenBudgetTracker, count_tokens_processed,
                               get_tokenizer_info, select_pile_shards,
                               setup_pile_streaming)
@@ -42,7 +40,7 @@ from utils.model_checkpoints import MODAL_APP, S3_BUCKET
 from utils.model_utils import (build_parscale_model,
                                count_trainable_parameters, setup_gpu_training)
 from utils.orthogonal_lora_loss import OrthogonalLoRALoss
-from utils.wandb_setup import (get_git_commit, log_stream_behavior_metrics,
+from utils.wandb_setup import (get_git_commit,
                                log_training_metrics, log_validation_metrics,
                                monitor_system_resources, setup_wandb)
 
@@ -153,8 +151,6 @@ def parse_args(argv=None):
                         help="Test mode: disable S3 sync and W&B logging to avoid logspam")
 
     # Contrastive learning parameters
-    parser.add_argument("--contrastive-gamma", type=float, default=0.0,
-                        help="Contrastive loss weight (0.0 disables contrastive learning)")
     parser.add_argument("--corruption-prob", type=float, default=0.5,
                         help="Probability of corrupting examples for contrastive learning")
 
@@ -172,7 +168,7 @@ def parse_args(argv=None):
             if hasattr(args, key) and getattr(args, key) is None:
                 # Ensure numeric values are properly typed
                 if key in ['learning_rate', 'min_lr', 'weight_decay', 'grad_clip', 'warmup_ratio',
-                           'contrastive_gamma', 'corruption_prob', 'lambda_bt', 'lambda_perp', 'lambda_kd']:
+                           'lambda_bt']:
                     value = float(value)
                 elif key in ['P', 'seq_len', 'prefix_len', 'batch_size', 'grad_accumulation',
                              'target_tokens', 'seed', 'target_batch_tokens', 'prefetch_factor',
@@ -277,7 +273,6 @@ def training_step(
     grad_accumulation_steps: int,
     grad_clip: float,
     step: int,
-    contrastive_loss_fn=None,
     orthogonal_lora_loss_fn=None,
     P: int = 1,
     logger=None,
@@ -294,11 +289,6 @@ def training_step(
     attention_mask = batch["attention_mask"].to(device)
     labels = batch["labels"].to(device)
 
-    # Extract contrastive metadata if available
-    is_corrupted = batch.get("is_corrupted")
-    if is_corrupted is not None:
-        is_corrupted = is_corrupted.to(device)
-
     # Memory diagnostics: Before forward pass
     memory_monitor.log_memory("before_forward", step)
 
@@ -309,7 +299,7 @@ def training_step(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 labels=labels,
-                return_stream_logits=(contrastive_loss_fn is not None),
+                return_stream_logits=False,
                 output_hidden_states=(orthogonal_lora_loss_fn is not None)
             )
 
@@ -329,17 +319,6 @@ def training_step(
                 loss_components["ce_loss"] = ce_loss
                 loss_components["total_loss"] = total_loss
 
-            elif contrastive_loss_fn is not None:
-                stream_logits = extract_parscale_stream_logits(outputs, P)
-                loss, loss_components = contrastive_loss_fn(
-                    stream_logits=stream_logits,
-                    labels=labels,
-                    is_corrupted=is_corrupted,
-                    attention_mask=attention_mask
-                )
-                total_loss = loss
-                loss_components["total_loss"] = total_loss
-
             else:
                 total_loss = outputs.loss
                 loss_components = {"ce_loss": outputs.loss, "total_loss": total_loss}
@@ -356,7 +335,7 @@ def training_step(
             input_ids=input_ids,
             attention_mask=attention_mask,
             labels=labels,
-            return_stream_logits=(contrastive_loss_fn is not None),
+            return_stream_logits=False,
             output_hidden_states=(orthogonal_lora_loss_fn is not None)
         )
 
@@ -377,16 +356,6 @@ def training_step(
             loss_components["ce_loss"] = ce_loss
             loss_components["total_loss"] = total_loss
 
-        elif contrastive_loss_fn is not None:
-            stream_logits = extract_parscale_stream_logits(outputs, P)
-            loss, loss_components = contrastive_loss_fn(
-                stream_logits=stream_logits,
-                labels=labels,
-                is_corrupted=is_corrupted,
-                attention_mask=attention_mask
-            )
-            total_loss = loss
-            loss_components["total_loss"] = total_loss
         else:
             total_loss = outputs.loss
             loss_components = {"ce_loss": outputs.loss, "total_loss": total_loss}
@@ -599,10 +568,6 @@ def run_experiment(
         val_examples_skip = (resume_step // config["eval_interval"]) * 100 * config["batch_size"]  # assumes default from max_eval_batches
 
     # Setup contrastive loss if enabled
-    contrastive_loss_fn = None
-    if config.get("contrastive_gamma", 0.0) > 0.0:
-        logger.info("Enabling contrastive learning with gamma=%.3f", config['contrastive_gamma'])
-        contrastive_loss_fn = ContrastiveLoss(gamma=config["contrastive_gamma"])
 
     # Setup L-1 orthogonal LoRA loss if enabled
     orthogonal_lora_loss_fn = None
@@ -621,7 +586,7 @@ def run_experiment(
         batch_size=config["batch_size"],
         num_workers=config["num_workers"],
         skip_examples=train_examples_skip,
-        corruption=contrastive_loss_fn is not None,
+        corruption=False,
     )
     val_dataloader = setup_pile_streaming(
         tokenizer=tokenizer,
@@ -629,7 +594,7 @@ def run_experiment(
         seq_len=config["seq_len"],
         batch_size=config["batch_size"],
         skip_examples=val_examples_skip,
-        corruption=contrastive_loss_fn is not None,
+        corruption=False,
     )
 
     # Log data lineage
@@ -656,7 +621,6 @@ def run_experiment(
                 grad_accumulation_steps=config["grad_accumulation"],
                 grad_clip=config["grad_clip"],
                 step=step,
-                contrastive_loss_fn=contrastive_loss_fn,
                 orthogonal_lora_loss_fn=orthogonal_lora_loss_fn,
                 P=P,
                 logger=logger,
@@ -697,29 +661,9 @@ def run_experiment(
                         "memory/trend": memory_summary['memory_trend']
                     }, step=step)
 
-                # Compute contrastive behavior metrics if enabled
-                contrastive_stats = {}
-                if contrastive_loss_fn is not None:
-                    with torch.no_grad():
-                        outputs = model(
-                            input_ids=batch["input_ids"].to(device),
-                            attention_mask=batch["attention_mask"].to(device),
-                            labels=batch["labels"].to(device),
-                            return_stream_logits=True
-                        )
-                        stream_logits = extract_parscale_stream_logits(outputs, P)
-                        if len(stream_logits) > 1:
-                            stream_disagreement = compute_stream_variance(stream_logits)
-                            contrastive_stats = log_stream_behavior_metrics(
-                                stream_disagreement=stream_disagreement,
-                                is_corrupted=batch["is_corrupted"].to(device),
-                                step=step,
-                                corruption_types=batch.get("corruption_types")
-                            )
-
                 # Log to W&B, don't commit if validation is about to happen at the same step
                 log_training_metrics(step, step_metrics, loss_components=None, stream_stats=stream_stats,
-                                     system_stats=system_stats, contrastive_stats=contrastive_stats or {}, logger=logger,
+                                     system_stats=system_stats, contrastive_stats={}, logger=logger,
                                      commit=step % config["eval_interval"] != 0)
 
             if step % config["save_interval"] == 0 and step > 0:

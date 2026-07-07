@@ -65,7 +65,7 @@ def modal__fParControl():
     # Note: Using only ParControl models for evaluation
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args(["--eval-benchmark-tasks"] + FULL_HALLUC_EVAL_SUITE + GENERAL_HALLUC_EVAL_SUITE +
-                             ["--s3-base-dir=s3://obviouslywrong-ndlora/evals/full"] +
+                             ["--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-full"] +
                              checkpoints))
     evaluate_all_models.remote(**kwargs)
 
@@ -76,7 +76,7 @@ def modal__gParControl():
     # NOTE: Randomly permute so we can have multiple workers running effectively in parallel
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args(["--eval-benchmark-tasks"] + GENERAL_HALLUC_EVAL_SUITE +
-                             ["--s3-base-dir=s3://obviouslywrong-ndlora/evals/general"] +
+                             ["--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-general"] +
                              checkpoints))
     evaluate_all_models.remote(**kwargs)
 
@@ -90,7 +90,7 @@ def modal__dParControl():
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args([
         "--sample-limit=1024",
-        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/deep",
+        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-deep",
 
     ] + checkpoints))
     evaluate_all_models.remote(**kwargs)
@@ -108,7 +108,7 @@ def modal__dParControl_spawns():
 
     kwargs = vars(parse_args([
         "--sample-limit=1024",
-        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/deep",
+        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-deep",
     ] + checkpoints))
 
     for worker in range(PARALLEL_WORKER_COUNT):
@@ -130,6 +130,6 @@ def modal__qParControl():
     checkpoints = random.sample(list(MODEL_CHECKPOINTS.values()), len(MODEL_CHECKPOINTS))
     kwargs = vars(parse_args([
         "--sample-limit=128",
-        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/quick",
+        "--s3-base-dir=s3://obviouslywrong-ndlora/evals/evals-quick",
     ] + checkpoints))
     evaluate_all_models.remote(**kwargs)

@@ -436,7 +436,7 @@ def main():
                         datefmt='%Y-%m-%d %H:%M:%S')
 
     args.results_path = args.results_base_path / f"evals-{args.analysis_mode}"
-    args.s3_path = args.s3_base_path.rstrip("/") + f"/{args.analysis_mode}"
+    args.s3_path = args.s3_base_path.rstrip("/") + f"/evals-{args.analysis_mode}"
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Load and verify

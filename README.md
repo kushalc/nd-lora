@@ -81,25 +81,23 @@ Pre-trained model checkpoints are available for all configurations reported in t
 - **ND-LoRA**: P=2/4/8 with stream-specific LoRA and optimized regularization
 - **Ablations**: Module ablations, architectural variants
 
-See [`utils/model_checkpoints_paper.py`](utils/model_checkpoints_paper.py) for checkpoint paths and configurations.
+See [`utils/model_checkpoints.py`](utils/model_checkpoints.py) for checkpoint paths and configurations.
 
 ### Using Model Checkpoints
 
-The `model_checkpoints_paper.py` module provides organized access to all paper-essential model checkpoints:
+The `model_checkpoints.py` module is the single source of truth for the paper-reproduction checkpoints, keyed by clean model name:
 
 ```python
-from utils.model_checkpoints_paper import (
-    CORE_CHECKPOINTS,      # Main results (Tables 1, 7, 8, 9)
-    ABLATION_CHECKPOINTS,  # Ablation studies (Table 4)
-    MODULE_ABLATION_CHECKPOINTS,  # Module ablations (Table 6)
-    ALL_CHECKPOINTS,       # Combined dictionary
-    MODEL_NAMES,          # Human-readable names
-    BASE_CHECKPOINTS      # Base model paths
+from utils.model_checkpoints import (
+    CHECKPOINTS,      # clean name -> loadable S3 checkpoint path (alias: ALL_CHECKPOINTS)
+    DISPLAY_NAMES,    # clean name -> human-readable label
+    MODEL_NAMES,      # eval-dir name -> "ParControl Q0.5B P=k: <Treatment>" (analysis vocabulary)
+    BASE_CHECKPOINTS, # base model HF ids
 )
 
 # Access checkpoint paths
-checkpoint_path = CORE_CHECKPOINTS["ND-LoRA_P4"]  # S3 path for ND-LoRA P=4 model
-model_name = MODEL_NAMES["ND-LoRA_P4"]  # "ND-LoRA (P=4, OptC9)"
+checkpoint_path = CHECKPOINTS["ND-LoRA_P4"]   # S3 path for ND-LoRA P=4 model
+model_name = DISPLAY_NAMES["ND-LoRA_P4"]      # "ND-LoRA (P=4, OptC9)"
 
 # Use with evaluation scripts
 python analyze_experiments.py --model-whitelist nd-lora/
@@ -208,7 +206,7 @@ nd-lora/
 ├── eval_neurodiversity.py       # Causality experiments (corruption analysis)
 ├── ParScale/                    # Core ParScale implementation (submodule)
 ├── utils/
-│   ├── model_checkpoints_paper.py  # Paper-essential model checkpoints
+│   ├── model_checkpoints.py        # Paper-repro model checkpoints (single source of truth)
 │   ├── model_utils.py           # Model loading and PEFT setup
 │   ├── stream_diagnostics.py    # Stream analysis and monitoring
 │   └── ...                      # Other utilities

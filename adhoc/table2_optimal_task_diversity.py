@@ -37,7 +37,7 @@ TASK_FILE_MAPPINGS = {
 }
 
 # Model ID mappings for different P values and configurations.
-# model_id is the eval-dir name; evals are stored under clean model names (see model_checkpoints_paper.py).
+# model_id is the eval-dir name; evals are stored under clean model names (see utils/model_checkpoints.py).
 MODEL_ID_MAPPINGS = {
     'P=1': {
         'Repro LoRA R32': 'Qwen2.5-0.5B_P1_R32'

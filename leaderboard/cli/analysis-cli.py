@@ -14,7 +14,7 @@ from sklearn.preprocessing import MinMaxScaler
 from src.backend.envs import EVAL_REQUESTS_PATH_BACKEND, EVAL_RESULTS_PATH_BACKEND
 from src.envs import QUEUE_REPO, RESULTS_REPO
 from src.utils import my_snapshot_download
-from utils.model_checkpoints_paper import ALL_CHECKPOINTS as MODEL_CHECKPOINTS, MODEL_NAMES, MODEL_SPACERS
+from utils.model_checkpoints import ALL_CHECKPOINTS as MODEL_CHECKPOINTS, DISPLAY_NAMES as MODEL_NAMES, MODEL_SPACERS
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(funcName)s %(message)s',
                     level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')

@@ -9,7 +9,7 @@ import random
 import time
 
 from leaderboard.backend_cli import app, evaluate_all_models, parse_args
-from utils.model_checkpoints_paper import BASE_CHECKPOINTS, ALL_CHECKPOINTS as MODEL_CHECKPOINTS
+from utils.model_checkpoints import BASE_CHECKPOINTS, ALL_CHECKPOINTS as MODEL_CHECKPOINTS
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(funcName)s %(message)s', level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')

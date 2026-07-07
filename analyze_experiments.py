@@ -20,7 +20,7 @@ import pandas as pd
 import seaborn as sns
 
 from utils.analysis_utils import parse_leaderboard_results
-from utils.model_checkpoints_paper import MODEL_NAMES
+from utils.model_checkpoints import MODEL_NAMES
 
 BASELINE_RANK = {
     "P=1": "R16",

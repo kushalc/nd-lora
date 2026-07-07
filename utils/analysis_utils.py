@@ -723,6 +723,13 @@ def parse_leaderboard_results(
                 logger.debug("Skipped %s without model_name", path)
                 continue
 
+            # ParControl S3 evals store a legacy run-id path in config.model_name; the eval-dir
+            # was renamed to the clean model name during the bucket migration. Key off the clean
+            # dir name (…/P=k/<clean>/results_*.json) so the clean MODEL_NAMES mapping applies.
+            # HF leaderboard results (config.model_name = "org/model") are left untouched.
+            if isinstance(model_name, str) and model_name.startswith("ParControl/"):
+                model_name = os.path.basename(os.path.dirname(path))
+
             for dataset_name, results_dict in data["results"].items():
                 for metric_name, value in results_dict.items():
                     to_add = True

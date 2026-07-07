@@ -115,9 +115,12 @@ def load_sample_level_data(base_path: Path) -> pd.DataFrame:
             with open(json_file) as f:
                 data = json.load(f)
 
-            # Extract model name from config
-            model_raw = data['config']['model_name']
-            model_name = MODEL_NAMES[model_raw].split(":")[-1].strip()
+            # Identify the model by its clean eval-dir name (…/P=k/<clean>/results_*.json),
+            # not the legacy run-id in config.model_name. Skip models outside the paper set.
+            model_dir = json_file.parent.name
+            if model_dir not in MODEL_NAMES:
+                continue
+            model_name = MODEL_NAMES[model_dir].split(":")[-1].strip()
             if model_name not in MODEL_WHITELIST:
                 continue
 

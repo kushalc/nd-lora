@@ -15,7 +15,7 @@ from statsig_utils import (
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(funcName)s %(message)s')
 
-# model_id is the eval-dir name; evals are stored under clean model names (see model_checkpoints_paper.py).
+# model_id is the eval-dir name; evals are stored under clean model names (see utils/model_checkpoints.py).
 MODEL_MAPPINGS = {
     'ND-LoRA P=2': ('P=2', 'ND-LoRA_P2'),
     'ParScale P=2': ('P=2', 'ParScale_P2_R32'),

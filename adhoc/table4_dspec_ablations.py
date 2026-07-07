@@ -31,8 +31,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from utils.model_checkpoints import MODEL_CHECKPOINTS
-
 
 def parse_duration(duration_str: str) -> float:
     """Parse duration string like '1h', '30m', '2d' into seconds."""
@@ -116,9 +114,6 @@ def load_evaluation_results(eval_dir, since_seconds: float = None):
     Returns:
         DataFrame with columns: model, task, dspec_DF, dspec_frob, dspec_cosine, path, etc.
     """
-    names_df = pd.Series(MODEL_CHECKPOINTS).reset_index().rename(columns={"index": "name", 0: "url"})
-    urls_s = names_df.set_index("url")["name"]
-
     all_paths = glob(str(eval_dir / "*.pkl"))
     if since_seconds is not None:
         cutoff_time = time.time() - since_seconds
@@ -133,6 +128,9 @@ def load_evaluation_results(eval_dir, since_seconds: float = None):
             dt = pickle.load(open(path, "rb"))
             dt["path"] = Path(path).name
             dt["path_mtime"] = datetime.fromtimestamp(Path(path).stat().st_mtime)
+            # Identify the model by its clean name embedded in the filename
+            # (<task>-<clean-model>-<seed>.pkl); the internal `model` field is a legacy run-id URL.
+            dt["model"] = Path(path).stem[len(dt["task"]) + 1:].rsplit("-", 1)[0]
             concat.append(dt)
         except:
             logging.warning("Couldn't load %s", path, exc_info=True)
@@ -148,7 +146,6 @@ def load_evaluation_results(eval_dir, since_seconds: float = None):
 
     raw_df = pd.DataFrame(concat)
     raw_df["eval_score"] = raw_df.apply(_extract_results, axis=1)
-    raw_df["model"] = raw_df["model"].apply(urls_s.to_dict().get)
 
     # Extract all dspec variants into separate columns
     dspec_all = raw_df.apply(lambda row: _calculate_dspec_all(row["layer_activations"], row["path"]), axis=1)
@@ -216,18 +213,18 @@ if __name__ == '__main__':
     summary_df["path_mtime"] = summary_df["path_mtime"].dt.round("1s")
     summary_df["n_samples"] = summary_df["n_samples"].astype(pd.Int64Dtype())
     summary_df = summary_df.reindex([
-        "ParScale R64 [P=4]",
-        "ParScale-BT R64 [P=4]",
-        "Stream LoRA [P=4]",
-        "Stream LoRA-BT [P=4]",
-        "ND-LoRA [P=2]",
-        "ND-LoRA [P=4]",
-        "ND-LoRA [P=8]",
+        "ParScale_P4_R64",
+        "ParScale-BT_P4",
+        "Stream_LoRA_P4",
+        "Stream_LoRA-BT_P4",
+        "ND-LoRA_P2",
+        "ND-LoRA_P4",
+        "ND-LoRA_P8",
     ])
     logging.info("Calculated D_spec variants by model:\n%s", summary_df.to_string(na_rep=""))
 
     ndlora_df = raw_df[raw_df['model'].str.startswith('ND-LoRA')].copy()
-    ndlora_df['P'] = ndlora_df['model'].str.extract(r'\[P=(\d+)\]')[0].astype(int)
+    ndlora_df['P'] = ndlora_df['model'].str.extract(r'_P(\d+)')[0].astype(int)
     parquet_df = ndlora_df.groupby(['P', "task"])[DSPEC_VARIANTS + ["eval_score"]].mean()
     output_path = Path("outputs") / "table4_task_level.parquet"
     parquet_df.to_parquet(output_path)

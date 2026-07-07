@@ -19,7 +19,7 @@ from utils.model_checkpoints import S3_BUCKET
 # in the ndlora bucket; sync_s3_to_local pulls them on demand (no pre-baked parquet).
 S3_BASE_PATH = f'{S3_BUCKET}/evals/evals-full/ParControl'
 # Shared with build_scores' sync target so table1/table2 reuse the same local copy.
-LOCAL_CACHE_DIR = Path(__file__).resolve().parent.parent / 'leaderboard/evals-full/ParControl'
+LOCAL_CACHE_DIR = Path(__file__).resolve().parent.parent / 'outputs/evals-full/ParControl'
 
 # Task name to metric key mappings
 METRICS_BY_TASK = {

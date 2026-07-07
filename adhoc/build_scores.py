@@ -19,8 +19,8 @@ from pathlib import Path
 from utils.model_checkpoints import S3_BUCKET
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PLOTS_DIR = REPO_ROOT / "plots"
-RESULTS_BASE = REPO_ROOT / "leaderboard"           # analyze reads results_base_path/evals-<mode>
+PLOTS_DIR = REPO_ROOT / "outputs" / "plots"
+RESULTS_BASE = REPO_ROOT / "outputs"               # analyze reads results_base_path/evals-<mode>
 S3_EVALS_BASE = f"{S3_BUCKET}/evals"
 BASELINE_MODE = "single-stream"
 
@@ -59,7 +59,7 @@ def ensure_scores_parquet(plot_type: str = "pub", mode: str = "full", force: boo
     sync_raw_evals(mode)
     logging.info("Regenerating scores parquet from raw evals: %s (mode=%s)", out, mode)
     cmd = [
-        sys.executable, str(REPO_ROOT / "analyze_experiments.py"),
+        sys.executable, str(REPO_ROOT / "scripts" / "analyze_experiments.py"),
         "--analysis-mode", mode,
         "--plot-mode", plot_type,
         "--baseline-mode", BASELINE_MODE,

@@ -25,7 +25,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(funcName)s %(message)s',
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent.parent
-OUTPUT_DIR = BASE_DIR / "paper/assets"
+OUTPUT_DIR = BASE_DIR / "outputs/assets"
 # Aggregated 'all'-cohort parquets are regenerated on demand from raw S3 evals (see build_scores).
 # NOTE: parquet index model names come from analyze_experiments.parse_model_metadata() /
 # utils.model_checkpoints.MODEL_NAMES on the eval config.model_name — verify after first build.

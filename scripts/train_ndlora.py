@@ -47,7 +47,7 @@ from utils.wandb_setup import (get_git_commit,
 logger = logging.getLogger(__name__)
 MODAL_GPU = "A100-80GB"
 MODAL_IMAGE = modal.Image.debian_slim(python_version="3.11") \
-                         .pip_install_from_requirements("requirements.txt") \
+                         .pip_install_from_pyproject("pyproject.toml") \
                          .run_commands("python -m spacy download en_core_web_sm") \
                          .env({"TOKENIZERS_PARALLELISM": "false"}) \
                          .add_local_dir("utils", "/root/utils") \

@@ -399,9 +399,9 @@ def filter_dataframe_by_type(df, data_map, plot_type):
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze ParScale experiments and generate leaderboard plots")
-    parser.add_argument("--results-base-path", type=Path, default="leaderboard",
+    parser.add_argument("--results-base-path", type=Path, default="outputs",
                         help="Path to evaluation results directory")
-    parser.add_argument("--output-dir", type=str, default="plots", help="Output directory for plots and data")
+    parser.add_argument("--output-dir", type=str, default="outputs/plots", help="Output directory for plots and data")
     parser.add_argument("--no-download", dest="download_repos", action="store_false", help="Skip downloading from HF & S3")
     parser.add_argument("--model-whitelist", nargs="+", help="Model name patterns to include",
                         default=[

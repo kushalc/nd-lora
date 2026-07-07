@@ -266,7 +266,7 @@ title_x = (output_x + output_w) / 2
 ax.text(title_x, 5.9, 'ND-LoRA Architecture (P=4)', **TEXT_KWARGS)
 plt.tight_layout()
 
-basedir = Path(__file__).parent.parent / "paper" / "assets"
+basedir = Path(__file__).parent.parent / "outputs" / "assets"
 plt.savefig(basedir / 'figure2_diagram.pdf', bbox_inches='tight', dpi=600, format='pdf')
 plt.savefig(basedir / 'figure2_diagram.png', bbox_inches='tight', dpi=600, format='png')
 

@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore', message='invalid value encountered in divide')
 warnings.filterwarnings('ignore', category=RuntimeWarning, module='statsmodels')
 
 BASE_DIR = Path(__file__).parent.parent
-OUTPUT_DIR = BASE_DIR / "paper/assets"
+OUTPUT_DIR = BASE_DIR / "outputs/assets"
 from statsig_utils import LOCAL_CACHE_DIR as EVALS_DIR  # shared sample-level cache (leaderboard/evals-full/ParControl)
 CACHE_DIR = BASE_DIR / "outputs/.cache/figure1_bootstrap"
 TABLE4_PARQUET = BASE_DIR / "outputs/table4_task_level.parquet"

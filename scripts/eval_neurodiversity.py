@@ -33,14 +33,14 @@ from utils.stream_aware_lora import parse_streams_from_batch
 
 MODAL_GPU = "A10G"  # A10G for better memory and performance
 MODAL_IMAGE = modal.Image.debian_slim(python_version="3.10") \
-    .pip_install_from_requirements(Path(__file__).parent / "requirements.txt") \
-    .pip_install_from_requirements(Path(__file__).parent / "leaderboard" / "requirements.txt") \
+    .pip_install_from_pyproject(Path(__file__).parent.parent / "pyproject.toml") \
+    .pip_install_from_requirements(Path(__file__).parent.parent / "leaderboard" / "requirements.txt") \
     .run_commands("python -m spacy download en_core_web_sm") \
     .env({"TOKENIZERS_PARALLELISM": "false"}) \
-    .add_local_dir(Path(__file__).parent / "leaderboard", "/root/leaderboard") \
-    .add_local_dir(Path(__file__).parent / "leaderboard/src", "/root/src") \
-    .add_local_dir(Path(__file__).parent / "utils", "/root/utils") \
-    .add_local_dir(Path(__file__).parent / "ParScale", "/root/ParScale")
+    .add_local_dir(Path(__file__).parent.parent / "leaderboard", "/root/leaderboard") \
+    .add_local_dir(Path(__file__).parent.parent / "leaderboard/src", "/root/src") \
+    .add_local_dir(Path(__file__).parent.parent / "utils", "/root/utils") \
+    .add_local_dir(Path(__file__).parent.parent / "ParScale", "/root/ParScale")
 app = modal.App(f"{MODAL_APP}-Causality")
 
 

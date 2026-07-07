@@ -158,26 +158,14 @@ def parse_args(argv=None):
     args.output_dir = "./outputs/%s" % args.run_id
     args.s3_base_dir = args.s3_base_dir.rstrip("/")
 
-    # Load config file if provided
+    # Load config file if provided. YAML values (native types) override argparse
+    # defaults; every key must name a known argument.
     if args.config:
         with open(args.config, 'r') as f:
-            config_dict = yaml.safe_load(f)
-
-        # Override args with config values, ensuring proper type conversion
+            config_dict = yaml.safe_load(f) or {}
         for key, value in config_dict.items():
-            if hasattr(args, key) and getattr(args, key) is None:
-                # Ensure numeric values are properly typed
-                if key in ['learning_rate', 'min_lr', 'weight_decay', 'grad_clip', 'warmup_ratio',
-                           'lambda_bt']:
-                    value = float(value)
-                elif key in ['P', 'seq_len', 'prefix_len', 'batch_size', 'grad_accumulation',
-                             'target_tokens', 'seed', 'target_batch_tokens', 'prefetch_factor',
-                             'buffer_size', 'num_workers', 'log_interval', 'eval_interval',
-                             'save_interval', 'lora_layers_start', 'lora_layers_end', 'lora_rank', 'design_layer']:
-                    value = int(value)
-                elif key in ['wandb_offline', 'memory_debug']:
-                    value = bool(value)
-                setattr(args, key, value)
+            assert hasattr(args, key), f"Unknown config key '{key}' in {args.config}"
+            setattr(args, key, value)
 
     # Data-loading defaults (high-throughput settings used for all paper runs)
     if args.num_workers is None:
@@ -795,166 +783,11 @@ def main(argv=None):
     modal_run_experiment.remote(args.P, vars(args))
 
 
-# == comparable set for P=1
 @app.local_entrypoint()
-def modal__P1__r32():
-    main([
-        "--P=1",
-        "--lora-rank=32",
-    ])
+def modal__train(config: str):
+    """Train a single ND-LoRA experiment from a YAML config in configs/.
 
-
-@app.local_entrypoint()
-def modal__P1__r64():
-    main([
-        "--P=1",
-        "--lora-rank=64",
-    ])
-
-
-@app.local_entrypoint()
-def modal__P1__r128():
-    main([
-        "--P=1",
-        "--lora-rank=128",
-    ])
-
-
-# == comparable set for P=2
-@app.local_entrypoint()
-def modal__P2__r32():
-    main([
-        "--P=2",
-        "--lora-rank=32",
-    ])
-
-
-# == comparable set for P=4
-@app.local_entrypoint()
-def modal__P4__r64():
-    main([
-        "--P=4",
-        "--lora-rank=64",
-    ])
-
-
-@app.local_entrypoint()
-def modal__lP4__r64():  # ParScale-BT ablation
-    main([
-        "--P=4",
-        "--lora-rank=64",
-        "--orthogonal-lora",
-    ])
-
-
-@app.local_entrypoint()
-def modal__slP4():
-    main([
-        "--P=4",
-        "--use-stream-lora",
-        "--orthogonal-lora",
-    ])
-
-
-@app.local_entrypoint()
-def modal__nslP4():
-    main([
-        "--P=4",
-        "--use-stream-lora",
-        "--orthogonal-lora",
-        "--bt-normalization-warmup",
-    ])
-
-
-# == OptC9 configurations for Qwen2.5-0.5B (Optuna-optimized hyperparameters)
-@app.local_entrypoint()
-def modal__nslP2__OptC9():
-    """ND-LoRA P=2 with Optuna-optimized hyperparameters (trial 009)"""
-    main([
-        "--P=2",
-        "--use-stream-lora",
-        "--orthogonal-lora",
-        "--bt-normalization-warmup",
-        "--design-layer=20",
-        "--lambda-bt=0.2899044045624172",
-        "--lora-modules", "q_proj", "k_proj", "v_proj",
-        "--lora-rank=16",
-    ])
-
-
-@app.local_entrypoint()
-def modal__nslP4__OptC9():
-    """ND-LoRA P=4 with Optuna-optimized hyperparameters (trial 001)"""
-    main([
-        "--P=4",
-        "--use-stream-lora",
-        "--orthogonal-lora",
-        "--bt-normalization-warmup",
-        "--design-layer=20",
-        "--lambda-bt=0.5779870909936439",
-        "--lora-modules", "q_proj", "k_proj", "v_proj",
-        "--lora-rank=16",
-    ])
-
-
-@app.local_entrypoint()
-def modal__nslP8__OptC9():
-    """ND-LoRA P=8 with Optuna-optimized hyperparameters (trial 002)"""
-    main([
-        "--P=8",
-        "--use-stream-lora",
-        "--orthogonal-lora",
-        "--bt-normalization-warmup",
-        "--design-layer=20",
-        "--lambda-bt=0.12656544871427247",
-        "--lora-modules", "q_proj", "k_proj", "v_proj",
-        "--lora-rank=16",
-    ])
-
-
-@app.local_entrypoint()
-def modal__sP4():
-    """Stream-LoRA P=4 without orthogonal constraint"""
-    main([
-        "--P=4",
-        "--use-stream-lora",
-        "--lora-rank=16",
-    ])
-
-
-# == comparable set for P=8
-@app.local_entrypoint()
-def modal__P8__r128():
-    main([
-        "--P=8",
-        "--lora-rank=128",
-    ])
-
-
-# == LoRA Ablation Experiments ==
-@app.local_entrypoint()
-def modal__p4_nOSL_ablation__modules():
-    check_git_repo_clean()
-
-    ablation_configs = [
-        {"modules": ["q_proj", "k_proj", "v_proj", "o_proj"], "name": "no_attention"},
-        {"modules": ["gate_proj", "up_proj", "down_proj"], "name": "no_mlp"},
-    ]
-
-    for config in ablation_configs:
-        args = [
-            "--P=4",
-            "--use-stream-lora",
-            "--orthogonal-lora",
-            "--bt-normalization-warmup",
-            "--lora-ablation-enabled",
-            "--name", config["name"]
-        ] + ["--lora-ablation-modules"] + config["modules"]
-
-        parsed_args = parse_args(args)
-        run_experiment.spawn(parsed_args.P, vars(parsed_args))
-        print(f"Spawned ablation run: {config['name']}")
-        print(f"Sleeping for some time before spawning next run to generate unique id..")
-        time.sleep(10)
-
-    print(f"Spawned {len(ablation_configs)} module ablation experiments")
+    Example:
+        modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
+    """
+    main(["--config", config])

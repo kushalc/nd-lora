@@ -1,0 +1,5 @@
+# ND-LoRA P=4 with original (pre-Optuna) hyperparameters
+P: 4
+use_stream_lora: true
+orthogonal_lora: true
+bt_normalization_warmup: true

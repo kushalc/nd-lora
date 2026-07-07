@@ -53,8 +53,8 @@ python train_ndlora.py \
   --bt-normalization-warmup \
   --target-tokens=20_000_000
 
-# Or use Modal for distributed training
-modal run train_ndlora::modal__nslP4__OptC9
+# Or use Modal for distributed training (each experiment is a YAML in configs/)
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
 ```
 
 ### Evaluation
@@ -128,38 +128,45 @@ The script automatically:
 
 ## Reproducing Paper Results
 
-All experiments in the paper can be reproduced using Modal for distributed execution:
+All experiments in the paper can be reproduced using Modal for distributed execution.
+Each experiment is a YAML in [`configs/`](configs/) (named for its checkpoint), run via a
+single entrypoint:
+
+```bash
+modal run train_ndlora.py::modal__train --config configs/<experiment>.yaml
+```
 
 ### Core Results (Tables 1, 7, 8, 9)
 
 ```bash
 # P=1 baselines (parameter-matched)
-modal run train_ndlora::modal__P1__r32
-modal run train_ndlora::modal__P1__r64
-modal run train_ndlora::modal__P1__r128
+modal run train_ndlora.py::modal__train --config configs/Qwen2.5-0.5B_P1_R32.yaml
+modal run train_ndlora.py::modal__train --config configs/Qwen2.5-0.5B_P1_R64.yaml
+modal run train_ndlora.py::modal__train --config configs/Qwen2.5-0.5B_P1_R128.yaml
 
 # ParScale baselines
-modal run train_ndlora::modal__P2__r32
-modal run train_ndlora::modal__P4__r64
-modal run train_ndlora::modal__P8__r128
+modal run train_ndlora.py::modal__train --config configs/ParScale_P2_R32.yaml
+modal run train_ndlora.py::modal__train --config configs/ParScale_P4_R64.yaml
+modal run train_ndlora.py::modal__train --config configs/ParScale_P8_R128.yaml
 
 # ND-LoRA main results (Optuna-optimized)
-modal run train_ndlora::modal__nslP2__OptC9
-modal run train_ndlora::modal__nslP4__OptC9
-modal run train_ndlora::modal__nslP8__OptC9
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P2.yaml
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P8.yaml
 ```
 
 ### Ablation Studies (Tables 4, 6)
 
 ```bash
 # Component ablations
-modal run train_ndlora::modal__lP4__r64      # ParScale-BT
-modal run train_ndlora::modal__sP4           # Stream-LoRA
-modal run train_ndlora::modal__slP4          # Stream-LoRA-BT
-modal run train_ndlora::modal__nslP4         # ND-LoRA (original HP)
+modal run train_ndlora.py::modal__train --config configs/ParScale-BT_P4.yaml       # ParScale-BT
+modal run train_ndlora.py::modal__train --config configs/Stream_LoRA_P4.yaml        # Stream-LoRA
+modal run train_ndlora.py::modal__train --config configs/Stream_LoRA-BT_P4.yaml     # Stream-LoRA-BT
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4_Original.yaml   # ND-LoRA (original HP)
 
 # Module ablations
-modal run train_ndlora::modal__p4_nOSL_ablation__modules
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4_no_attention.yaml
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4_no_MLP.yaml
 ```
 
 ### Evaluation
@@ -197,9 +204,10 @@ python eval_neurodiversity.py \
 
 ```
 nd-lora/
-├── train_ndlora.py           # Main training script with Modal entrypoints
+├── train_ndlora.py           # Main training script (single YAML-driven Modal entrypoint)
 ├── eval_experiments.py          # Hallucination benchmark evaluation
 ├── eval_neurodiversity.py       # Causality experiments (corruption analysis)
+├── configs/                     # One YAML per paper experiment (named for its checkpoint)
 ├── ParScale/                    # Core ParScale implementation (vendored)
 ├── utils/
 │   ├── model_checkpoints.py        # Paper-repro model checkpoints (single source of truth)
@@ -228,7 +236,7 @@ pip install modal
 modal token new
 
 # Run experiment
-modal run train_ndlora::modal__nslP4__OptC9
+modal run train_ndlora.py::modal__train --config configs/ND-LoRA_P4.yaml
 ```
 
 ## Citation

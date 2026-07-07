@@ -1,0 +1,8 @@
+# ND-LoRA P=4 module ablation: attention-projection LoRA removed
+P: 4
+use_stream_lora: true
+orthogonal_lora: true
+bt_normalization_warmup: true
+lora_ablation_enabled: true
+lora_ablation_modules: [q_proj, k_proj, v_proj, o_proj]
+name: no_attention

@@ -1,0 +1,4 @@
+# ParScale-BT: P=4 shared LoRA + Barlow Twins (orthogonal-LoRA loss), no stream-specific LoRA
+P: 4
+lora_rank: 64
+orthogonal_lora: true

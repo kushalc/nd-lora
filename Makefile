@@ -8,7 +8,7 @@
 #   make            # this help
 #   make all        # every figure + table
 #   make figures    # figure1, figure2, lora-rank-confound figure
-#   make tables     # tables 1, 2, 4 (dspec + score), 7/8/9, 10
+#   make tables     # tables 1, 2, 3, 5 (dspec + score), 7/8/9, 10
 #   make figure1    # a single named target (see list below)
 #   make clean      # remove generated figures + tables
 
@@ -28,6 +28,7 @@ FIG_CONF   := $(ASSETS)/lora_rank_confound.pdf   # side-effect of the table10 re
 
 TAB1       := $(TABLES)/table1_bootstrap_cis.txt
 TAB2       := $(TABLES)/table2_optimal_task_diversity.txt
+TAB3       := $(TABLES)/table3_baselines.tex
 TAB5_DSPEC := $(TABLES)/table5_dspec_ablations.txt
 TAB5_SCORE := $(TABLES)/table5_score_ablation.txt
 TAB789     := $(TABLES)/table789_benchmark_table.tex
@@ -37,7 +38,8 @@ TAB10      := $(TABLES)/table10_lora_confounders.tex
 TABLE5_PARQUET := outputs/table5_task_level.parquet
 
 FIGURE_FILES := $(FIG1) $(FIG2) $(FIG_CONF)
-TABLE_FILES  := $(TAB1) $(TAB2) $(TAB5_DSPEC) $(TAB5_SCORE) $(TAB789) $(TAB10)
+TABLE_FILES  := $(TAB1) $(TAB2) $(TAB3) $(TAB5_DSPEC) $(TAB5_SCORE) $(TAB789) $(TAB10)
+
 
 # Delete a half-written target if its recipe fails, so a failed S3 sync never
 # leaves a truncated figure/table that looks up to date on the next run.
@@ -45,7 +47,8 @@ TABLE_FILES  := $(TAB1) $(TAB2) $(TAB5_DSPEC) $(TAB5_SCORE) $(TAB789) $(TAB10)
 
 .PHONY: help all figures tables clean \
         figure1 figure2 figure-confound \
-        table1 table2 table5-dspec table5-score table789 table10
+        table1 table2 table3 table5-dspec table5-score table789 table10 \
+        figure3 table4
 
 help:
 	@echo "Targets:"
@@ -54,7 +57,7 @@ help:
 	@echo "  make tables         # $(notdir $(TABLE_FILES))"
 	@echo ""
 	@echo "  Figures:  figure1  figure2  figure-confound"
-	@echo "  Tables:   table1  table2  table5-dspec  table5-score  table789  table10"
+	@echo "  Tables:   table1  table2  table3  table5-dspec  table5-score  table789  table10"
 	@echo ""
 	@echo "  make clean          # remove all generated figures + tables"
 
@@ -68,6 +71,7 @@ figure2: $(FIG2)
 figure-confound: $(FIG_CONF)
 table1: $(TAB1)
 table2: $(TAB2)
+table3: $(TAB3)
 table5-dspec: $(TAB5_DSPEC)
 table5-score: $(TAB5_SCORE)
 table789: $(TAB789)
@@ -94,6 +98,11 @@ $(TAB1): $(ADHOC)/table1_bootstrap_cis.py $(ADHOC)/statsig_utils.py $(DATADEPS) 
 
 $(TAB2): $(ADHOC)/table2_optimal_task_diversity.py $(ADHOC)/statsig_utils.py $(DATADEPS) | $(TABLES)
 	$(RUN) $(ADHOC)/table2_optimal_task_diversity.py > $@ 2>&1
+
+# Self-contained: syncs the vendored baseline evals ({S3_BUCKET}/baselines) and reads our rows from
+# the all-full parquet; the naming SSOT is utils/analysis_utils.py. Emits LaTeX to stdout.
+$(TAB3): $(ADHOC)/table3_baselines.py utils/analysis_utils.py $(DATADEPS) | $(TABLES)
+	$(RUN) $(ADHOC)/table3_baselines.py --latex > $@
 
 # The dspec recipe writes both the .txt log and outputs/table5_task_level.parquet.
 $(TAB5_DSPEC): $(ADHOC)/table5_dspec_ablations.py $(DATADEPS) | $(TABLES)

@@ -1,0 +1,4 @@
+# Stream-LoRA-BT: P=4 stream-specific LoRA + Barlow Twins
+P: 4
+use_stream_lora: true
+orthogonal_lora: true

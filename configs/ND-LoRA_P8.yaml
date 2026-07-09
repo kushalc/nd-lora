@@ -1,0 +1,8 @@
+# ND-LoRA P=8 (Optuna-optimized hyperparameters, trial 002)
+P: 8
+use_stream_lora: true
+orthogonal_lora: true
+bt_normalization_warmup: true
+design_layer: 20
+lora_modules: [q_proj, k_proj, v_proj]
+lora_rank: 16

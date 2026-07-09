@@ -1,0 +1,3 @@
+# ParScale baseline: P=4 shared LoRA, no Barlow Twins
+P: 4
+lora_rank: 64

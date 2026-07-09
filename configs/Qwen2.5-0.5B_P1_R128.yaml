@@ -1,0 +1,3 @@
+# P=1 parameter-matched LoRA baseline (rank 128)
+P: 1
+lora_rank: 128

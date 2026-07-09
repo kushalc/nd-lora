@@ -1,0 +1,4 @@
+# Stream-LoRA: P=4 stream-specific LoRA, no Barlow Twins
+P: 4
+lora_rank: 16
+use_stream_lora: true

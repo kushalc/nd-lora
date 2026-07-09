@@ -8,7 +8,7 @@ import logging
 import random
 import re
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Tuple
 
 import spacy
 from datasets import load_dataset

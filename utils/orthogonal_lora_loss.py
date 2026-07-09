@@ -5,11 +5,10 @@ orthogonality penalty, and knowledge distillation.
 """
 
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from utils.stream_aware_lora import parse_streams_from_batch
 

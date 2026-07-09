@@ -5,7 +5,6 @@ Each stream gets independent LoRA parameters while maintaining full attention ac
 
 import logging
 import math
-from typing import List, Optional
 
 import torch
 import torch.nn as nn

@@ -2,7 +2,6 @@ import gc
 import logging
 
 import torch
-from transformers import get_linear_schedule_with_warmup
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +92,7 @@ class MemoryMonitor:
                 recent_growth = self._calculate_memory_trend()
                 if recent_growth > 0.005:  # Growing by >0.5% per step
                     self.logger.warning(f"  Memory trending upward: +{recent_growth*100:.2f}% per step")
-                    self.logger.warning(f"  Consider: torch.cuda.empty_cache(), reduce batch size, or gradient checkpointing")
+                    self.logger.warning("  Consider: torch.cuda.empty_cache(), reduce batch size, or gradient checkpointing")
 
     def _calculate_memory_trend(self):
         """Calculate recent memory usage trend."""

@@ -6,7 +6,7 @@ Handles model loading, PEFT setup, and ParScale configuration.
 import logging
 import os
 import sys
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -417,34 +417,6 @@ def setup_gpu_training(high_memory_mode: bool = False,
     logger.info(f"Mixed precision: {scaler is not None}")
 
     return device, scaler
-
-
-def get_model_memory_usage(model: PreTrainedModel) -> Dict[str, float]:
-    """
-    Get model memory usage statistics.
-
-    Args:
-        model: Model to analyze
-
-    Returns:
-        Dictionary with memory usage in MB
-    """
-    param_size = 0
-    buffer_size = 0
-
-    for param in model.parameters():
-        param_size += param.numel() * param.element_size()
-
-    for buffer in model.buffers():
-        buffer_size += buffer.numel() * buffer.element_size()
-
-    total_size = param_size + buffer_size
-
-    return {
-        "parameters_mb": param_size / (1024 * 1024),
-        "buffers_mb": buffer_size / (1024 * 1024),
-        "total_mb": total_size / (1024 * 1024)
-    }
 
 
 def validate_parscale_model(model: Union[PeftModel, PreTrainedModel], P: int):

@@ -14,7 +14,6 @@ import os
 import pickle
 import random
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -23,7 +22,6 @@ import numpy as np
 import pandas as pd
 import torch
 
-from leaderboard.backend_cli import get_model_alias
 from leaderboard.src.backend.manage_requests import EvalRequest
 from leaderboard.src.backend.run_eval_suite import run_evaluation
 from leaderboard.src.utils import get_tasks_by_benchmarks
@@ -286,8 +284,7 @@ def build_instrumented_eval_request(model_name: str, target_layer: str, activati
         def hook_fn(module, inputs, output):
             if getattr(module, "_active_hook", False):
                 return output
-            if isinstance(inputs, tuple):
-                inputs = inputs[0]
+            inputs = inputs[0] if isinstance(inputs, tuple) else inputs
 
             assert inputs.shape[0] % parscale_n == 0, f"Batch size {inputs.shape[0]} not divisible by P={parscale_n}"
             assert inputs.shape[-1] == hidden_size, f"Hidden size mismatch: got {inputs.shape[-1]}, expected {hidden_size}"
@@ -353,124 +350,6 @@ def build_instrumented_eval_request(model_name: str, target_layer: str, activati
     }[corruption_mode]
     logging.info("Registered combined hook for layer: %s (corruption_mode=%s details=%s)",
                  target_layer, corruption_mode, corruption_details)
-    return eval_request
-
-
-def build_instrumented_eval_request_with_module_groups(
-    model_name: str,
-    layer_idx: int,
-    module_types: List[str],
-    activation_storage: Dict[str, List]
-):
-    """Create EvalRequest with hooks for multiple modules within a single layer.
-
-    Args:
-        model_name: Model identifier or S3 path
-        layer_idx: Layer index to hook (e.g., 5 for layer 5)
-        module_types: List of module types to hook from ["self_attn", "mlp", "layer"]
-        activation_storage: Dict mapping module_type -> List of activation results
-
-    Returns:
-        EvalRequest with registered hooks for each module type
-    """
-    # Create standard EvalRequest and load model
-    eval_request = EvalRequest(model=model_name, private=False, status="RUNNING", json_filepath="")
-    eval_request.load_model()
-    assert eval_request._model is not None, f"Failed to load model: {model_name}"
-
-    # Detect IHD models (no ParScale attributes) and skip instrumentation
-    if not hasattr(eval_request._model.model.model, 'parscale_n'):
-        logging.info("Detected IHD model (no parscale_n attribute) - skipping module group instrumentation")
-        return eval_request
-
-    parscale_n = eval_request._model.model.model.parscale_n
-    hidden_size = eval_request._model.model.model.aggregate_layer[0].out_features
-
-    # Validate inputs
-    assert isinstance(module_types, list) and len(module_types) > 0
-    assert all(mt in ["self_attn", "mlp", "layer"] for mt in module_types), \
-        f"module_types must be 'self_attn', 'mlp', or 'layer', got {module_types}"
-    assert isinstance(activation_storage, dict)
-    assert all(mt in activation_storage for mt in module_types), \
-        f"activation_storage must have keys for all module_types"
-
-    # Build module paths for the specified layer
-    target_module_paths = []
-    for mt in module_types:
-        if mt == "layer":
-            # Hook entire decoder layer (baseline measurement)
-            target_module_paths.append(f"model.model.layers.{layer_idx}")
-        else:
-            # Hook specific module (self_attn or mlp)
-            target_module_paths.append(f"model.model.layers.{layer_idx}.{mt}")
-
-    logging.info("Registering %d hooks for layer %d (modules=%s)",
-                 len(target_module_paths), layer_idx, module_types)
-
-    def make_module_hook(module_path: str):
-        """Create hook for multi-module mode (no corruption support)."""
-        parts = module_path.split(".")
-        assert len(parts) in [4, 5], f"Expected 'model.model.layers.X[.module]', got {module_path}"
-        hook_layer_idx = int(parts[3])
-
-        if len(parts) == 4:
-            # Entire decoder layer: model.model.layers.5
-            module_type = "layer"
-        else:
-            # Specific module: model.model.layers.5.self_attn
-            module_type = parts[4]
-
-        assert module_type in activation_storage, \
-            f"module_type '{module_type}' not in storage: {list(activation_storage.keys())}"
-
-        def hook_fn(module, inputs, output):
-            if getattr(module, "_active_hook", False):
-                return output
-
-            try:
-                module._active_hook = True
-
-                # Extract hidden_states from tuple output
-                if isinstance(output, tuple):
-                    hidden_states = output[0]
-                else:
-                    hidden_states = output
-
-                # Safety checks on output
-                assert hidden_states.shape[0] % parscale_n == 0, \
-                    f"Batch size {hidden_states.shape[0]} not divisible by P={parscale_n}"
-                assert hidden_states.shape[-1] == hidden_size, \
-                    f"Hidden size {hidden_states.shape[-1]} != expected {hidden_size}"
-
-                # Compute dspec
-                reshaped_output = parse_streams_from_batch(hidden_states, parscale_n)
-
-                # Store results in dict by module type
-                results = {
-                    **_dspec_fields("original_dspec", reshaped_output),
-                    "layer_idx": hook_layer_idx,
-                    "module_type": module_type,
-                }
-                activation_storage[module_type].append(results)
-
-                return output
-
-            finally:
-                module._active_hook = False
-
-        return hook_fn
-
-    # Register hooks for each module
-    eval_request._activation_hooks = []
-
-    for module_path in target_module_paths:
-        module = get_module_by_name(eval_request._model, module_path)
-        hook = make_module_hook(module_path)
-        eval_request._activation_hooks.append(
-            module.register_forward_hook(hook)
-        )
-
-    logging.info("Successfully registered %d hook(s)", len(eval_request._activation_hooks))
     return eval_request
 
 

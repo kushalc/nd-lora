@@ -364,7 +364,6 @@ def generate_tables(df_2r: pd.DataFrame, df_32: pd.DataFrame, show_ci: bool = Tr
     def print_transposed_table(df, ranks, caption, label, scaling_row=True):
         """Print transposed table with metrics as rows, ranks as columns."""
         df_sorted = df.sort_values('rank')
-        n_cols = len(ranks) + 1  # metric name + ranks
         col_spec = 'l' + 'c' * len(ranks)
 
         print("\\begin{table}[htbp]")

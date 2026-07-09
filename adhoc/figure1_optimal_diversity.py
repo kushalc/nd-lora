@@ -25,8 +25,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from joblib import Memory
-from matplotlib.ticker import FuncFormatter, PercentFormatter
-from scipy.optimize import minimize, minimize_scalar
+from matplotlib.ticker import FuncFormatter
+from scipy.optimize import minimize
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from utils.model_checkpoints import MODEL_NAMES
@@ -822,7 +822,7 @@ def generate_optimality_plot(traces_df: pd.DataFrame, samples_df: pd.DataFrame, 
     ax.axvline(x=0, color='red', linestyle='--', alpha=0.5, linewidth=1.5, label='Optimal P', zorder=3)
     ax.axhline(y=plot_df["mean"].max() - 1, color='red', linestyle='--', alpha=0.5, linewidth=1.5, zorder=3)
 
-    ax.set_xlabel('$\Delta P$ (Distance from Optimal Neural Diversity)', fontsize=10)
+    ax.set_xlabel(r'$\Delta P$ (Distance from Optimal Neural Diversity)', fontsize=10)
     ax.set_ylabel('Reliability', fontsize=10)
     ax.set_title("Multi-Task Reliability: Sensitivity to Neural Diversity", fontsize=11)
     ax.legend(fontsize=8, loc='lower right')

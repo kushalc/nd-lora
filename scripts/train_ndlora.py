@@ -12,8 +12,6 @@ import json
 import logging
 import os
 import random
-import shutil
-import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -652,7 +650,7 @@ def run_experiment(
 
                 val_metrics = validation_step(model, val_dataloader, device)
                 log_metrics(logger, step, val_metrics, name="validation_step")
-                log_validation_metrics(step, val_metrics, logger)
+                log_validation_metrics(step, val_metrics)
 
                 # Save best model
                 if val_metrics["loss"] < best_val_loss:
@@ -697,7 +695,7 @@ def run_experiment(
                 save_last_checkpoint(model=model, optimizer=optimizer, scheduler=scheduler,
                                      step=step, config=config, token_tracker=token_tracker,
                                      P=P, logger=logger)
-            except Exception as checkpoint_err:
+            except Exception:
                 logger.error("Failed to save emergency checkpoint", exc_info=True)
 
         # Final memory diagnostics for debugging OOM

@@ -144,7 +144,7 @@ for (p_label, subtable_letter) in zip(group_order, subtables):
     cols = [col for col in desired_order if col in pivot_df.columns]
     pivot_df = pivot_df[cols]
 
-    print(f"\\begin{{table}}[htbp]")
+    print("\\begin{table}[htbp]")
     print("  \\centering")
     print("  \\begin{tabular}{l|" + "c" * len(pivot_df.columns) + "}")
     escaped_cols = [col.replace('_', '\\_') for col in pivot_df.columns]

@@ -87,10 +87,8 @@ def compute_significance_for_task(task_col_name: str, best_p: str, baseline_p: s
     # Determine test method
     if test_method == 'auto':
         use_mcnemar = is_binary
-        use_bootstrap = not is_binary
     else:
         use_mcnemar = test_method in ('mcnemar', 'both')
-        use_bootstrap = test_method in ('bootstrap', 'both')
 
     logging.info("Computing significance for task=%s best_p=%s vs baseline_p=%s (binary=%s)",
                  task_col_name, best_p, baseline_p, is_binary)

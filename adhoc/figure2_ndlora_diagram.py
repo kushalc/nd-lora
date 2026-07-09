@@ -7,9 +7,7 @@ import logging
 from itertools import combinations
 from pathlib import Path
 
-import matplotlib.patches as patches
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.patches import ConnectionPatch, FancyBboxPatch
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')

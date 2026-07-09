@@ -133,10 +133,6 @@ def generate_absolute_plots(df, output_dir, plot_type='all', analysis_mode="quic
         logging.warning("No valid models found for plotting")
         return None
 
-    # Create 2D grid: rows = base models, cols = P values
-    n_rows = len(base_models)
-    n_cols = len(p_values)
-
     # Calculate width ratios based on number of columns in each subplot
     widths = []
     for base_model in base_models:

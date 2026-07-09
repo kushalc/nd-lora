@@ -23,7 +23,6 @@ import argparse
 import json
 import logging
 import pickle
-import re
 import subprocess
 from pathlib import Path
 

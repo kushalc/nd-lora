@@ -155,18 +155,16 @@ ablations.
 
 ```
 nd-lora/
+├── adhoc/                       # figure/table generation
+├── configs/                     # one YAML per paper experiment (named for its checkpoint)
 ├── scripts/                     # Modal entry points (train, evaluate, analyze)
 │   ├── train_ndlora.py          #   YAML-driven training
-│   ├── eval_experiments.py      #   hallucination benchmark evaluation
+│   ├── eval_experiments.py      #   benchmark evaluation
 │   ├── eval_neurodiversity.py   #   causal corruption / dose-response analysis
 │   └── analyze_experiments.py   #   results parsing + publication plots
-├── configs/                     # one YAML per paper experiment (named for its checkpoint)
-├── utils/model_checkpoints.py   # checkpoint registry (single source of truth)
-├── adhoc/                       # figure/table generation
-├── ParScale/                    # parallel-stream architecture (vendored)
-├── leaderboard/                 # hallucination evaluation harness (vendored)
-├── paper/                       # LaTeX source
-└── pyproject.toml               # dependencies + packaging (single source)
+├── utils/                       # helper libraries
+├── leaderboard/                 # vendored: hallucination evaluation harness
+└── ParScale/                    # vendored: parallel-stream architecture
 ```
 
 ## Citation

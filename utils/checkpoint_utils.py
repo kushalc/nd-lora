@@ -9,6 +9,18 @@ import torch.nn as nn
 import yaml
 from botocore.exceptions import ClientError, NoCredentialsError
 
+_S3_CLIENT = None
+
+
+def _s3_client():
+    """Lazily-built, process-wide S3 client. `check_and_download_from_s3` is called once per
+    (model, task, resampling) in the eval loop; reuse one client instead of resolving credentials
+    and setting up a session on every existence check."""
+    global _S3_CLIENT
+    if _S3_CLIENT is None:
+        _S3_CLIENT = boto3.client('s3')
+    return _S3_CLIENT
+
 
 def construct_s3_key(file_path: Path, output_dir_path: Path, s3_key_prefix: str) -> str:
     """Helper to construct S3 key preserving directory structure relative to output_dir."""
@@ -147,7 +159,7 @@ def check_and_download_from_s3(s3_key: str, local_path: str = None) -> bool:
         raise ValueError(f"Invalid S3 path format: '{s3_key}'. Expected 's3://bucket/key'")
 
     bucket_name = path_parts[0]
-    s3_client = boto3.client('s3')
+    s3_client = _s3_client()
 
     try:
         logging.info("Checking to see if %s exists in S3", s3_key)
@@ -220,16 +232,12 @@ def load_checkpoint(
         logger.info(f"Successfully resumed from step {step}: {processed_tokens:,} tokens")
         return step
 
-    except Exception as e:
+    except Exception:
         logger.error("Couldn't load checkpoint; starting from scratch", exc_info=True)
         if require_load:
             raise
         else:
             return None
-
-
-def load_best_checkpoint(*nargs, **kwargs):
-    return load_checkpoint(*nargs, basename="best_model_state.pt", **kwargs)
 
 
 def load_last_checkpoint(*nargs, **kwargs):
